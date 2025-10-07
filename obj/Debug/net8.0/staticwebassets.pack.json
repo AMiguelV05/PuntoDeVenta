@@ -1,0 +1,41 @@
+{
+  "Files": [
+    {
+      "Id": "C:\\Users\\PC\\PuntoDeVenta\\obj\\Debug\\net8.0\\scopedcss\\projectbundle\\PuntoDeVenta.bundle.scp.css",
+      "PackagePath": "staticwebassets\\PuntoDeVenta.bundle.scp.css"
+    },
+    {
+      "Id": "C:\\Users\\PC\\PuntoDeVenta\\wwwroot\\app.css",
+      "PackagePath": "staticwebassets\\app.css"
+    },
+    {
+      "Id": "C:\\Users\\PC\\PuntoDeVenta\\wwwroot\\bootstrap\\bootstrap.min.css",
+      "PackagePath": "staticwebassets\\bootstrap\\bootstrap.min.css"
+    },
+    {
+      "Id": "C:\\Users\\PC\\PuntoDeVenta\\wwwroot\\bootstrap\\bootstrap.min.css.map",
+      "PackagePath": "staticwebassets\\bootstrap\\bootstrap.min.css.map"
+    },
+    {
+      "Id": "C:\\Users\\PC\\PuntoDeVenta\\wwwroot\\favicon.png",
+      "PackagePath": "staticwebassets\\favicon.png"
+    },
+    {
+      "Id": "obj\\Debug\\net8.0\\staticwebassets\\msbuild.PuntoDeVenta.Microsoft.AspNetCore.StaticWebAssets.props",
+      "PackagePath": "build\\Microsoft.AspNetCore.StaticWebAssets.props"
+    },
+    {
+      "Id": "obj\\Debug\\net8.0\\staticwebassets\\msbuild.build.PuntoDeVenta.props",
+      "PackagePath": "build\\PuntoDeVenta.props"
+    },
+    {
+      "Id": "obj\\Debug\\net8.0\\staticwebassets\\msbuild.buildMultiTargeting.PuntoDeVenta.props",
+      "PackagePath": "buildMultiTargeting\\PuntoDeVenta.props"
+    },
+    {
+      "Id": "obj\\Debug\\net8.0\\staticwebassets\\msbuild.buildTransitive.PuntoDeVenta.props",
+      "PackagePath": "buildTransitive\\PuntoDeVenta.props"
+    }
+  ],
+  "ElementsToRemove": []
+}

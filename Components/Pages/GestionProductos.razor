@@ -1,0 +1,147 @@
+@page "/productos"
+@rendermode InteractiveServer
+@using Microsoft.EntityFrameworkCore
+@using PuntoDeVenta.Data
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
+@inject IJSRuntime JSRuntime
+
+<h3>Gestión de Productos 🔩</h3>
+<button @onclick="@MetodoDePrueba" class="btn btn-info mb-m">Click</button>
+<EditForm Model="productoModel" OnValidSubmit="GuardarProducto" FormName="gestionarProductos">
+    <DataAnnotationsValidator />
+    <h4>@(editando ? "Editar Producto" : "Nuevo Producto")</h4>
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="mb-3">
+                <label>Nombre:</label>
+                <InputText @bind-Value="productoModel.Nombre" class="form-control" />
+                <ValidationMessage For="@(() => productoModel.Nombre)" />
+            </div>
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label>Precio Venta:</label>
+                    <InputNumber TValue="decimal" @bind-Value="productoModel.PrecioVenta" class="form-control" />
+                     <ValidationMessage For="@(() => productoModel.PrecioVenta)" />
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label>Stock Actual:</label>
+                    <InputNumber TValue="int" @bind-Value="productoModel.StockActual" class="form-control" />
+                     <ValidationMessage For="@(() => productoModel.StockActual)" />
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary">@(editando ? "Actualizar" : "Crear")</button>
+            @if (editando)
+            {
+                <button type="button" class="btn btn-secondary" @onclick="CancelarEdicion">Cancelar</button>
+            }
+        </div>
+    </div>
+</EditForm>
+
+@if (productos == null)
+{
+    <p><em>Cargando...</em></p>
+}
+else
+{
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Nombre</th>
+                <th>Precio Venta</th>
+                <th>Stock</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var prod in productos)
+            {
+                <tr>
+                    <td>@prod.Nombre</td>
+                    <td>@prod.PrecioVenta.ToString("C")</td>
+                    <td>@prod.StockActual</td>
+                    <td>
+                        <button class="btn btn-sm btn-warning" @onclick="() => PrepararEdicion(prod)">Editar</button>
+                        <button class="btn btn-sm btn-danger" @onclick="() => EliminarProducto(prod.ProductoId)">Eliminar</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<Producto>? productos;
+    private Producto productoModel = new();
+    private bool editando = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarProductos();
+    }
+
+    private async Task CargarProductos()
+    {
+        using var db = DbFactory.CreateDbContext();
+        productos = await db.Productos.AsNoTracking().OrderBy(p => p.Nombre).ToListAsync();
+    }
+
+    private void PrepararEdicion(Producto productoAEditar)
+    {
+        productoModel = new Producto
+        {
+            ProductoId = productoAEditar.ProductoId,
+            Nombre = productoAEditar.Nombre,
+            PrecioVenta = productoAEditar.PrecioVenta,
+            StockActual = productoAEditar.StockActual,
+            Descripcion = productoAEditar.Descripcion,
+            PrecioCompra = productoAEditar.PrecioCompra,
+            CategoriaId = productoAEditar.CategoriaId
+        };
+        editando = true;
+    }
+
+    private async Task GuardarProducto()
+    {
+        using var db = DbFactory.CreateDbContext();
+
+        if (editando) // Actualizar (Cambio)
+        {
+            db.Productos.Update(productoModel);
+        }
+        else // Crear (Alta)
+        {
+            await db.Productos.AddAsync(productoModel);
+        }
+
+        await db.SaveChangesAsync();
+        await CargarProductos();
+        CancelarEdicion();
+    }
+
+    private async Task EliminarProducto(int id)
+    {
+        var confirmado = await JSRuntime.InvokeAsync<bool>("confirm", $"¿Estás seguro que quieres eliminar este producto?");
+        if (confirmado)
+        {
+            using var db = DbFactory.CreateDbContext();
+            var producto = await db.Productos.FindAsync(id);
+            if (producto != null)
+            {
+                db.Productos.Remove(producto); // Baja
+                await db.SaveChangesAsync();
+                await CargarProductos();
+            }
+        }
+    }
+
+    private void CancelarEdicion()
+    {
+        productoModel = new();
+        editando = false;
+    }
+    private void MetodoDePrueba()
+    {
+        Console.WriteLine("!!! EL BOTÓN DE PRUEBA FUNCIONA !!!");
+    }
+}
