@@ -3,7 +3,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace PuntoDeVenta.Data;
 
-[Table("categoria")] // El nombre exacto de la tabla en PostgreSQL
+[Table("categorias")] // El nombre exacto de la tabla en PostgreSQL
 public class Categoria
 {
     [Key]

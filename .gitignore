@@ -1,0 +1,92 @@
+# =========================
+# .NET / Visual Studio Ignore List
+# =========================
+
+## Build results
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+out/
+
+## User-specific files
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.userprefs
+
+## VS Code
+.vscode/
+.history/
+*.code-workspace
+
+## Visual Studio
+.vs/
+.idea/
+
+## Backup & cache
+*.bak
+*.cache
+*.tmp
+*.temp
+*.log
+
+## ASP.NET and Blazor
+wwwroot/lib/
+wwwroot/dist/
+node_modules/
+bundle/
+dist/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+pnpm-lock.yaml
+
+## Entity Framework / SQLite
+*.db
+*.sqlite
+*.sqlite3
+*.mdf
+*.ldf
+Migrations/
+
+## Publish outputs
+publish/
+[Pp]ublished/
+release/
+Release/
+Debug/
+*.Publish.xml
+
+## Configuration files (local)
+appsettings.Development.json
+appsettings.Local.json
+secrets.json
+
+## Resharper / Rider
+_ReSharper*/
+*.DotSettings.user
+.idea/
+
+## JetBrains Rider
+.idea/
+*.sln.iml
+
+## Test results
+[Tt]est[Rr]esult*/
+*.coverage
+*.coveragexml
+*.trx
+
+## Other
+Thumbs.db
+Desktop.ini
+*.DS_Store
+*.swp
+*.orig
+
+# =========================
+# END OF FILE
+# =========================

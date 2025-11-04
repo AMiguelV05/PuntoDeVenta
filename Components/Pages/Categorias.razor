@@ -1,0 +1,121 @@
+@page "/categorias"
+@rendermode InteractiveServer
+@using Microsoft.EntityFrameworkCore
+@using PuntoDeVenta.Data
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
+@inject IJSRuntime JSRuntime
+
+<h3>Gestión de Categorías 📚</h3>
+
+<EditForm Model="categoriaModel" OnValidSubmit="GuardarCategoria" FormName="gestionarCategorias">
+    <DataAnnotationsValidator />
+    <h4>@(editando ? "Editar Categoría" : "Nueva Categoría")</h4>
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="mb-3">
+                <label>Nombre:</label>
+                <InputText @bind-Value="categoriaModel.Nombre" class="form-control" />
+                <ValidationMessage For="@(() => categoriaModel.Nombre)" />
+            </div>
+            <button type="submit" class="btn btn-primary">@(editando ? "Actualizar" : "Crear")</button>
+            @if (editando)
+            {
+                <button type="button" class="btn btn-secondary" @onclick="CancelarEdicion">Cancelar</button>
+            }
+        </div>
+    </div>
+</EditForm>
+
+@if (categorias == null)
+{
+    <p><em>Cargando...</em></p>
+}
+else
+{
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Nombre</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var cat in categorias)
+            {
+                <tr>
+                    <td>@cat.Nombre</td>
+                    <td>
+                        <button class="btn btn-sm btn-warning" @onclick="() => PrepararEdicion(cat)">Editar</button>
+                        <button class="btn btn-sm btn-danger" @onclick="() => EliminarCategoria(cat.CategoriaId)">Eliminar</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<Categoria>? categorias;
+    private Categoria categoriaModel = new();
+    private bool editando = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarCategorias();
+    }
+
+    private async Task CargarCategorias()
+    {
+        using var db = DbFactory.CreateDbContext();
+        categorias = await db.Categorias.AsNoTracking().OrderBy(c => c.Nombre).ToListAsync();
+    }
+
+    private void PrepararEdicion(Categoria categoriaAEditar)
+    {
+        // Asumiendo que Categoria tiene CategoriaId y Nombre
+        categoriaModel = new Categoria
+        {
+            CategoriaId = categoriaAEditar.CategoriaId,
+            Nombre = categoriaAEditar.Nombre
+        };
+        editando = true;
+    }
+
+    private async Task GuardarCategoria()
+    {
+        using var db = DbFactory.CreateDbContext();
+        if (editando)
+        {
+            db.Categorias.Update(categoriaModel);
+        }
+        else
+        {
+            await db.Categorias.AddAsync(categoriaModel);
+        }
+        await db.SaveChangesAsync();
+        await CargarCategorias();
+        CancelarEdicion();
+    }
+
+    private async Task EliminarCategoria(int id)
+    {
+        var confirmado = await JSRuntime.InvokeAsync<bool>("confirm", "¿Estás seguro que quieres eliminar esta categoría?");
+        if (confirmado)
+        {
+            using var db = DbFactory.CreateDbContext();
+            var categoria = await db.Categorias.FindAsync(id);
+            if (categoria != null)
+            {
+                db.Categorias.Remove(categoria);
+                await db.SaveChangesAsync();
+                await CargarCategorias();
+            }
+        }
+    }
+
+    private void CancelarEdicion()
+    {
+        categoriaModel = new();
+        editando = false;
+    }
+}
