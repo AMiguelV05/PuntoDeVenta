@@ -3,18 +3,20 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace PuntoDeVenta.Data;
 
-[Table("categorias")] // El nombre exacto de la tabla en PostgreSQL
+[Table("categorias")]
 public class Categoria
 {
     [Key]
-    [Required]
     [Column("categoria_id")]
-    public int CategoriaId { get; set; }
+    public long CategoriaId { get; set; } 
 
-    [Required]
+    [Required] 
     [Column("nombre")]
     public string Nombre { get; set; }
 
     [Column("descripcion")]
     public string? Descripcion { get; set; }
+
+    // Una Categoria tiene muchos Productos
+    public virtual ICollection<Producto> Productos { get; set; } = new List<Producto>();
 }

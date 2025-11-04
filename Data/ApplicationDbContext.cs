@@ -8,5 +8,6 @@ public class ApplicationDbContext : DbContext
 
     public DbSet<Producto> Productos { get; set; }
     public DbSet<Categoria> Categorias { get; set; }
-    // Aquí agregarás los otros DbSet para Empleado, Cliente, Venta, etc.
+    public DbSet<Venta> Ventas { get; set; }
+    public DbSet<DetalleVenta> DetallesVenta { get; set; }
 }

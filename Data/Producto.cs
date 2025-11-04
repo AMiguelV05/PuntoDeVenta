@@ -4,14 +4,14 @@ using PuntoDeVenta.Data;
 
 namespace PuntoDeVenta.Data;
 
-[Table("productos")] // El nombre exacto de la tabla en PostgreSQL
+[Table("productos")]
 public class Producto
 {
     [Key]
     [Column("producto_id")]
-    public int ProductoId { get; set; }
+    public long ProductoId { get; set; }
 
-    [Required(ErrorMessage = "El nombre es obligatorio")]
+    [Required]
     [Column("nombre")]
     public string Nombre { get; set; }
 
@@ -21,18 +21,30 @@ public class Producto
     [Column("precio_compra")]
     public decimal? PrecioCompra { get; set; }
 
-    [Required(ErrorMessage = "El precio de venta es obligatorio")]
+    [Required]
     [Column("precio_venta")]
-    [Range(0.01, double.MaxValue, ErrorMessage = "El precio de venta debe ser mayor a cero")]
     public decimal PrecioVenta { get; set; }
 
     [Required]
     [Column("stock_actual")]
-    [Range(0, int.MaxValue, ErrorMessage = "El stock no puede ser negativo")]
     public int StockActual { get; set; }
 
     [Column("categoria_id")]
-    public int? CategoriaId { get; set; }
+    public long? CategoriaId { get; set; }
+
+    [Required]
+    [Column("codigo_sku")]
+    public string CodigoSku { get; set; }
+
+    // FKs
+
+    // Un Producto pertenece a una Categoria
     [ForeignKey("CategoriaId")]
     public virtual Categoria? Categoria { get; set; }
+
+    //  Un Producto puede estar en muchos DetalleVenta
+    public virtual ICollection<DetalleVenta> DetalleVentas { get; set; } = new List<DetalleVenta>();
+
+    // Un Producto puede estar en muchos DetalleEntrada
+    public virtual ICollection<DetalleEntrada> DetalleEntradas { get; set; } = new List<DetalleEntrada>();
 }
