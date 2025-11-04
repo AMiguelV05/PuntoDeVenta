@@ -1,17 +1,17 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using Microsoft.EntityFrameworkCore;
 
 namespace PuntoDeVenta.Data;
 
 [Table("detalle_venta")]
+[PrimaryKey(nameof(VentaId), nameof(LineaNum))]
 public class DetalleVenta
 {
-    [Key]
-    [Column("venta_id", Order = 0)] // primera columna de la PK
+    [Column("venta_id")] // primera columna de la PK
     public long VentaId { get; set; }
 
-    [Key]
-    [Column("linea_num", Order = 1)] // segunda columna de la PK
+    [Column("linea_num")] // segunda columna de la PK
     public int LineaNum { get; set; }
 
     [Required]

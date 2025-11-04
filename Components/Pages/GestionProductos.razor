@@ -119,7 +119,7 @@ else
         CancelarEdicion();
     }
 
-    private async Task EliminarProducto(int id)
+    private async Task EliminarProducto(long id)
     {
         var confirmado = await JSRuntime.InvokeAsync<bool>("confirm", $"¿Estás seguro que quieres eliminar este producto?");
         if (confirmado)

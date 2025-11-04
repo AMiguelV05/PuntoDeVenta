@@ -97,7 +97,7 @@ else
         CancelarEdicion();
     }
 
-    private async Task EliminarCategoria(int id)
+    private async Task EliminarCategoria(long id)
     {
         var confirmado = await JSRuntime.InvokeAsync<bool>("confirm", "¿Estás seguro que quieres eliminar esta categoría?");
         if (confirmado)
