@@ -5,8 +5,7 @@
 @inject IDbContextFactory<ApplicationDbContext> DbFactory
 @inject IJSRuntime JSRuntime
 
-<h3>Gestión de Productos 🔩</h3>
-<button @onclick="@MetodoDePrueba" class="btn btn-info mb-m">Click</button>
+<h3>Gestión de Productos</h3>
 <EditForm Model="productoModel" OnValidSubmit="GuardarProducto" FormName="gestionarProductos">
     <DataAnnotationsValidator />
     <h4>@(editando ? "Editar Producto" : "Nuevo Producto")</h4>
@@ -139,9 +138,5 @@ else
     {
         productoModel = new();
         editando = false;
-    }
-    private void MetodoDePrueba()
-    {
-        Console.WriteLine("!!! EL BOTÓN DE PRUEBA FUNCIONA !!!");
     }
 }

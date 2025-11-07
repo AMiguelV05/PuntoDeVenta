@@ -1,0 +1,137 @@
+@page "/clientes"
+@rendermode InteractiveServer
+@using Microsoft.EntityFrameworkCore
+@using PuntoDeVenta.Data
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
+@inject IJSRuntime JSRuntime
+
+<h3>Gestión de Clientes</h3>
+
+<EditForm Model="clienteModel" OnValidSubmit="GuardarCliente" FormName="gestionarClientes">
+    <DataAnnotationsValidator />
+    <h4>@(editando ? "Editar Cliente" : "Nuevo Cliente")</h4>
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="mb-3">
+                <label>Nombre:</label>
+                <InputText @bind-Value="clienteModel.Nombre" class="form-control" />
+                <ValidationMessage For="@(() => clienteModel.Nombre)" />
+            </div>
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label>Teléfono:</label>
+                    <InputText @bind-Value="clienteModel.Telefono" class="form-control" />
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label>Email:</label>
+                    <InputText @bind-Value="clienteModel.Correo" class="form-control" />
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary">@(editando ? "Actualizar" : "Crear")</button>
+            @if (editando)
+            {
+                <button type="button" class="btn btn-secondary" @onclick="CancelarEdicion">Cancelar</button>
+            }
+        </div>
+    </div>
+</EditForm>
+
+@if (clientes == null)
+{
+    <p><em>Cargando...</em></p>
+}
+else
+{
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Nombre</th>
+                <th>Teléfono</th>
+                <th>Email</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var cli in clientes)
+            {
+                <tr>
+                    <td>@cli.Nombre</td>
+                    <td>@cli.Telefono</td>
+                    <td>@cli.Correo</td>
+                    <td>
+                        <button class="btn btn-sm btn-warning" @onclick="() => PrepararEdicion(cli)">Editar</button>
+                        <button class="btn btn-sm btn-danger" @onclick="() => EliminarCliente(cli.ClienteId)">Eliminar</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<Cliente>? clientes;
+    private Cliente clienteModel = new();
+    private bool editando = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarClientes();
+    }
+
+    private async Task CargarClientes()
+    {
+        using var db = DbFactory.CreateDbContext();
+        clientes = await db.Clientes.AsNoTracking().OrderBy(c => c.Nombre).ToListAsync();
+    }
+
+    private void PrepararEdicion(Cliente clienteAEditar)
+    {
+        // Asumiendo campos del modelo Cliente
+        clienteModel = new Cliente
+        {
+            ClienteId = clienteAEditar.ClienteId,
+            Nombre = clienteAEditar.Nombre,
+            Telefono = clienteAEditar.Telefono,
+            Correo = clienteAEditar.Correo
+        };
+        editando = true;
+    }
+
+    private async Task GuardarCliente()
+    {
+        using var db = DbFactory.CreateDbContext();
+        if (editando)
+        {
+            db.Clientes.Update(clienteModel);
+        }
+        else
+        {
+            await db.Clientes.AddAsync(clienteModel);
+        }
+        await db.SaveChangesAsync();
+        await CargarClientes();
+        CancelarEdicion();
+    }
+
+    private async Task EliminarCliente(long id)
+    {
+        var confirmado = await JSRuntime.InvokeAsync<bool>("confirm", "¿Estás seguro que quieres eliminar este cliente?");
+        if (confirmado)
+        {
+            using var db = DbFactory.CreateDbContext();
+            var cliente = await db.Clientes.FindAsync(id);
+            if (cliente != null)
+            {
+                db.Clientes.Remove(cliente);
+                await db.SaveChangesAsync();
+                await CargarClientes();
+            }
+        }
+    }
+
+    private void CancelarEdicion()
+    {
+        clienteModel = new();
+        editando = false;
+    }
+}
