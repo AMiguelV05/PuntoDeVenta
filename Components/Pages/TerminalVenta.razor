@@ -1,0 +1,260 @@
+@page "/venta"
+@rendermode InteractiveServer
+@using Microsoft.EntityFrameworkCore
+@using PuntoDeVenta.Data
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
+@inject IJSRuntime JSRuntime
+@inject NavigationManager NavManager
+
+<h3>Terminal de Venta</h3>
+
+<div class="row">
+    <div class="col-md-7">
+        <div class="mb-3">
+            <label>Buscar Producto:</label>
+            <div class="input-group">
+                <InputText @bind-Value="terminoBusqueda" class="form-control" @oninput="BuscarProductos" placeholder="Escribe nombre o código..." />
+            </div>
+        </div>
+
+        @if (resultadosBusqueda.Any())
+        {
+            <ul class="list-group mb-3">
+                @foreach (var prod in resultadosBusqueda)
+                {
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        @prod.Nombre (@prod.StockActual disp.) - @prod.PrecioVenta.ToString("C")
+                        <button class="btn btn-sm btn-success" @onclick="() => AgregarAlCarrito(prod)" disabled="@(prod.StockActual <= 0)">
+                            Agregar
+                        </button>
+                    </li>
+                }
+            </ul>
+        }
+
+        <h4>Carrito Actual</h4>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Producto</th>
+                    <th>Cantidad</th>
+                    <th>Precio Unit.</th>
+                    <th>Subtotal</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in carrito)
+                {
+                    <tr>
+                        <td>@item.Producto.Nombre</td>
+                        <td>
+                            <input type="number" @bind-Value="item.Cantidad" @bind-Value:event="oninput" step="any" class="form-control form-control-sm" style="width: 70px;" min="1" />
+                        </td>
+                        <td>@item.PrecioUnitario.ToString("C")</td>
+                        <td>@((item.Cantidad * item.PrecioUnitario).ToString("C"))</td>
+                        <td>
+                            <button class="btn btn-sm btn-danger" @onclick="() => EliminarDelCarrito(item)">Quitar</button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+
+    </div>
+
+    <div class="col-md-5">
+        <div class="card">
+            <div class="card-body">
+                <h4 class="card-title">Resumen de Venta</h4>
+                
+                <div class="mb-3">
+                    <label>Cliente:</label>
+                    <InputSelect @bind-Value="ventaActual.ClienteId" class="form-select">
+                        <option value="0">(Público General)</option>
+                        @foreach (var cli in clientesDisponibles)
+                        {
+                            <option value="@cli.ClienteId">@cli.Nombre</option>
+                        }
+                    </InputSelect>
+                </div>
+                
+                <hr />
+                
+                <h5 class="d-flex justify-content-between">
+                    <span>Subtotal:</span>
+                    <strong>@subtotal.ToString("C")</strong>
+                </h5>
+                <h5 class="d-flex justify-content-between">
+                    <span>IVA (16%):</span>
+                    <strong>@iva.ToString("C")</strong>
+                </h5>
+                <h3 class="d-flex justify-content-between mt-3">
+                    <span>Total:</span>
+                    <strong>@total.ToString("C")</strong>
+                </h3>
+                
+                <hr />
+                
+                <div class="d-grid gap-2">
+                    <button class="btn btn-lg btn-success" @onclick="FinalizarVenta" disabled="@(!carrito.Any())">
+                        Cobrar y Finalizar Venta
+                    </button>
+                    <button class="btn btn-lg btn-danger" @onclick="LimpiarVenta" disabled="@(!carrito.Any())">
+                        Cancelar Venta
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+@code {
+    private string terminoBusqueda = "";
+    private List<Producto> resultadosBusqueda = new();
+    private List<DetalleVenta> carrito = new();
+    private List<Cliente> clientesDisponibles = new();
+    
+    private Venta ventaActual = new();
+    private decimal subtotal => carrito.Sum(item => item.Cantidad * item.PrecioUnitario);
+    private decimal iva => subtotal * 0.16m; // 16% de IVA
+    private decimal total => subtotal + iva;   // La suma de los dos de arriba
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Cargar clientes para el selector
+        using var db = DbFactory.CreateDbContext();
+        clientesDisponibles = await db.Clientes.AsNoTracking().OrderBy(c => c.Nombre).ToListAsync();
+    }
+
+    private async Task BuscarProductos(ChangeEventArgs e)
+    {
+        terminoBusqueda = e.Value?.ToString() ?? "";
+        if (string.IsNullOrWhiteSpace(terminoBusqueda) || terminoBusqueda.Length < 2)
+        {
+            resultadosBusqueda.Clear();
+            return;
+        }
+
+        using var db = DbFactory.CreateDbContext();
+        resultadosBusqueda = await db.Productos
+            .Where(p => p.Nombre.ToLower().Contains(terminoBusqueda.ToLower()))
+            .OrderBy(p => p.Nombre)
+            .AsNoTracking()
+            .Take(10) // Limitar resultados para no saturar
+            .ToListAsync();
+    }
+
+    private void AgregarAlCarrito(Producto prod)
+    {
+        if (prod.StockActual <= 0)
+        {
+            JSRuntime.InvokeVoidAsync("alert", "No hay stock de este producto.");
+            return;
+        }
+
+        var itemExistente = carrito.FirstOrDefault(i => i.ProductoId == prod.ProductoId);
+        if (itemExistente != null)
+        {
+            if(itemExistente.Cantidad < prod.StockActual)
+            {
+                itemExistente.Cantidad++;
+            }
+            else
+            {
+                 JSRuntime.InvokeVoidAsync("alert", "No hay más stock disponible.");
+            }
+        }
+        else
+        {
+            carrito.Add(new DetalleVenta
+            {
+                ProductoId = prod.ProductoId,
+                Producto = prod, // Guardamos la referencia para el nombre en la tabla
+                Cantidad = 1,
+                PrecioUnitario = prod.PrecioVenta
+            });
+        }
+        
+        terminoBusqueda = "";
+        resultadosBusqueda.Clear();
+    }
+
+    private void EliminarDelCarrito(DetalleVenta item)
+    {
+        carrito.Remove(item);
+    }
+
+    private void LimpiarVenta()
+    {
+        carrito.Clear();
+        ventaActual = new();
+        terminoBusqueda = "";
+        resultadosBusqueda.Clear();
+    }
+
+    private async Task FinalizarVenta()
+    {
+        if (!carrito.Any()) return;
+        
+        var confirmado = await JSRuntime.InvokeAsync<bool>("confirm", $"¿Finalizar venta por un total de {total:C}?");
+        if (!confirmado) return;
+
+        using var db = DbFactory.CreateDbContext();
+        // Usamos una transacción para asegurar que todo se guarde correctamente
+        using var transaccion = await db.Database.BeginTransactionAsync();
+        
+        try
+        {
+            var productoIds = carrito.Select(item => item.ProductoId).Distinct().ToList();
+            var productosEnDb = await db.Productos
+                .Where(p => productoIds.Contains(p.ProductoId))
+                .ToDictionaryAsync(p => p.ProductoId);
+
+            ventaActual.FechaVenta = DateTime.UtcNow;
+            ventaActual.Total = total;
+            // Asignar null si no se seleccionó cliente
+            ventaActual.ClienteId = ventaActual.ClienteId == 0 ? null : ventaActual.ClienteId;
+            ventaActual.EmpleadoId = 1; // Empleado fijo
+
+            await db.Ventas.AddAsync(ventaActual);
+            await db.SaveChangesAsync(); // Guardamos para obtener el VentaId
+
+            // 2. Guardar Detalles y Actualizar Stock
+            foreach (var item in carrito)
+            {
+                // Asignar el ID de la venta recién creada
+                item.VentaId = ventaActual.VentaId;
+                item.Producto = null!; // Evitar que EF intente guardar el producto de nuevo
+                await db.DetalleVentas.AddAsync(item);
+
+                // 3. Actualizar Stock del Producto
+                if (productosEnDb.TryGetValue(item.ProductoId, out var producto) && producto.StockActual >= item.Cantidad)
+                {
+                    producto.StockActual -= item.Cantidad;
+                }
+                else
+                {
+                    // Si no hay stock, cancelar toda la transacción
+                    throw new Exception($"Stock insuficiente para {item.Producto?.Nombre ?? "Producto desconocido"}.");
+                }
+            }
+
+            // Guardar todos los cambios (Detalles y Stock)
+            await db.SaveChangesAsync();
+
+            // Confirmar la transacción
+            await transaccion.CommitAsync();
+
+            await JSRuntime.InvokeVoidAsync("alert", "¡Venta realizada con éxito!");
+            LimpiarVenta();
+        }
+        catch (Exception ex)
+        {
+            // Revertir todo si algo falló
+            await transaccion.RollbackAsync();
+            await JSRuntime.InvokeVoidAsync("alert", $"Error al guardar la venta: {ex.Message}");
+        }
+    }
+}

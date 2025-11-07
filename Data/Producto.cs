@@ -27,7 +27,7 @@ public class Producto
 
     [Required]
     [Column("stock_actual")]
-    public int StockActual { get; set; }
+    public decimal StockActual { get; set; }
 
     [Column("categoria_id")]
     public long? CategoriaId { get; set; }

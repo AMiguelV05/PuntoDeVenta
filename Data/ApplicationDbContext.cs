@@ -9,7 +9,7 @@ public class ApplicationDbContext : DbContext
     public DbSet<Producto> Productos { get; set; }
     public DbSet<Categoria> Categorias { get; set; }
     public DbSet<Venta> Ventas { get; set; }
-    public DbSet<DetalleVenta> DetallesVenta { get; set; }
+    public DbSet<DetalleVenta> DetalleVentas { get; set; }
     public DbSet<Empleado> Empleados { get; set; }
     public DbSet<Entrada> Entradas { get; set; }
     public DbSet<DetalleEntrada> DetallesEntrada { get; set; }

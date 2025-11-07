@@ -17,8 +17,12 @@ public class Venta
     public DateTimeOffset FechaVenta { get; set; }
 
     [Required]
+    [Column("total")]
+    public decimal Total { get; set; }
+
+    [Required]
     [Column("cliente_id")]
-    public long ClienteId { get; set; }
+    public long? ClienteId { get; set; }
 
     [Required]
     [Column("empleado_id")]
