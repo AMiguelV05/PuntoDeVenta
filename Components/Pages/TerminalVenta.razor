@@ -209,6 +209,7 @@
         try
         {
             var productoIds = carrito.Select(item => item.ProductoId).Distinct().ToList();
+
             var productosEnDb = await db.Productos
                 .Where(p => productoIds.Contains(p.ProductoId))
                 .ToDictionaryAsync(p => p.ProductoId);
@@ -217,20 +218,22 @@
             ventaActual.Total = total;
             // Asignar null si no se seleccionó cliente
             ventaActual.ClienteId = ventaActual.ClienteId == 0 ? null : ventaActual.ClienteId;
-            ventaActual.EmpleadoId = 1; // Empleado fijo
+            ventaActual.EmpleadoId = 1; // Empleado fijo por ahora
 
             await db.Ventas.AddAsync(ventaActual);
             await db.SaveChangesAsync(); // Guardamos para obtener el VentaId
 
-            // 2. Guardar Detalles y Actualizar Stock
+            int lineaCounter = 1;
+
             foreach (var item in carrito)
             {
-                // Asignar el ID de la venta recién creada
                 item.VentaId = ventaActual.VentaId;
+                item.LineaNum = lineaCounter;
+                
                 item.Producto = null!; // Evitar que EF intente guardar el producto de nuevo
                 await db.DetalleVentas.AddAsync(item);
 
-                // 3. Actualizar Stock del Producto
+                // Actualizar Stock del Producto
                 if (productosEnDb.TryGetValue(item.ProductoId, out var producto) && producto.StockActual >= item.Cantidad)
                 {
                     producto.StockActual -= item.Cantidad;
@@ -238,9 +241,12 @@
                 else
                 {
                     // Si no hay stock, cancelar toda la transacción
-                    throw new Exception($"Stock insuficiente para {item.Producto?.Nombre ?? "Producto desconocido"}.");
+                    throw new Exception($"Stock insuficiente para {producto?.Nombre ?? "Producto desconocido"}.");
                 }
+
+                lineaCounter++;
             }
+
 
             // Guardar todos los cambios (Detalles y Stock)
             await db.SaveChangesAsync();
