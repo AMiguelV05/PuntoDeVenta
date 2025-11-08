@@ -1,7 +1,74 @@
 ﻿@page "/"
+@rendermode InteractiveServer
 
 <PageTitle>Home</PageTitle>
 
-<h1>Hello, world!</h1>
+<div class="container mt-4">
+    <div class="row mb-4">
+        <div class="col-12 text-center">
+            <h1>Bienvenido a tu Punto de Venta</h1>
+            <p class="lead">Selecciona una tarea para comenzar.</p>
+        </div>
+    </div>
 
-Welcome to your new app.
+    <div class="row g-4">
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-body text-center d-flex flex-column">
+                    <i class="bi bi-cart-fill" style="font-size: 3rem; color: var(--bs-success);"></i>
+                    <h5 class="card-title mt-3">Caja</h5>
+                    <p class="card-text">Ir a la terminal principal para registrar nuevas ventas.</p>
+                    <a href="/venta" class="btn btn-success mt-auto">Iniciar Venta</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-body text-center d-flex flex-column">
+                    <i class="bi bi-box-seam-fill" style="font-size: 3rem; color: var(--bs-primary);"></i>
+                    <h5 class="card-title mt-3">Productos</h5>
+                    <p class="card-text">Administrar el inventario, precios y stock de productos.</p>
+                    <a href="/productos" class="btn btn-primary mt-auto">Gestionar Productos</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-body text-center d-flex flex-column">
+                    <i class="bi bi-bar-chart-line-fill" style="font-size: 3rem; color: var(--bs-info);"></i>
+                    <h5 class="card-title mt-3">Reportes</h5>
+                    <p class="card-text">Ver el historial de ventas, filtrar por fechas y consultar detalles.</p>
+                    <a href="/reportes/ventas" class="btn btn-info mt-auto">Ver Reportes</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-body text-center d-flex flex-column">
+                    <i class="bi bi-people-fill" style="font-size: 3rem; color: var(--bs-warning);"></i>
+                    <h5 class="card-title mt-3">Clientes</h5>
+                    <p class="card-text">Administrar la base de datos de tus clientes registrados.</p>
+                    <a href="/clientes" class="btn btn-warning mt-auto">Gestionar Clientes</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-body text-center d-flex flex-column">
+                    <i class="bi bi-tags-fill" style="font-size: 3rem; color: var(--bs-secondary);"></i>
+                    <h5 class="card-title mt-3">Categorías</h5>
+                    <p class="card-text">Organizar tus productos en diferentes categorías.</p>
+                    <a href="/categorias" class="btn btn-secondary mt-auto">Gestionar Categorías</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    // Esta página es puramente visual, no necesita lógica de C# por ahora.
+}
