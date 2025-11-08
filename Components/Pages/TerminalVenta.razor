@@ -139,7 +139,8 @@
 
         using var db = DbFactory.CreateDbContext();
         resultadosBusqueda = await db.Productos
-            .Where(p => p.Nombre.ToLower().Contains(terminoBusqueda.ToLower()))
+            .Where(p => p.Nombre.ToLower().Contains(terminoBusqueda.ToLower()) ||
+                        p.CodigoSku.ToLower().Contains(terminoBusqueda.ToLower()))
             .OrderBy(p => p.Nombre)
             .AsNoTracking()
             .Take(10) // Limitar resultados para no saturar

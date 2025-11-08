@@ -1,0 +1,149 @@
+@page "/reportes/ventas"
+@rendermode InteractiveServer
+@using Microsoft.EntityFrameworkCore
+@using PuntoDeVenta.Data
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
+
+<h3>Reporte de Ventas</h3>
+
+<div class="card mb-3">
+    <div class="card-body">
+        <h5 class="card-title">Filtrar por Fecha</h5>
+        <div class="row g-3 align-items-center">
+            <div class="col-auto">
+                <label for="fechaInicio" class="col-form-label">Desde:</label>
+            </div>
+            <div class="col-auto">
+                <InputDate id="fechaInicio" @bind-Value="fechaInicio" class="form-control" />
+            </div>
+            <div class="col-auto">
+                <label for="fechaFin" class="col-form-label">Hasta:</label>
+            </div>
+            <div class="col-auto">
+                <InputDate id="fechaFin" @bind-Value="fechaFin" class="form-control" />
+            </div>
+            <div class="col-auto">
+                <button class="btn btn-primary" @onclick="CargarReporte">Generar Reporte</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (ventas == null)
+{
+    <p><em>Selecciona un rango de fechas y genera el reporte.</em></p>
+}
+else if (!ventas.Any())
+{
+    <p><em>No se encontraron ventas en ese rango de fechas.</em></p>
+}
+else
+{
+    <h4>Total de Ventas: @ventas.Sum(v => v.Total).ToString("C")</h4>
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>ID Venta</th>
+                <th>Fecha</th>
+                <th>Cliente</th>
+                <th>Total</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var v in ventas)
+            {
+                <tr>
+                    <td>@v.VentaId</td>
+                    <td>@v.FechaVenta.LocalDateTime.ToString("g")</td>
+                    <td>@(v.Cliente?.Nombre ?? "Público General")</td>
+                    <td>@v.Total.ToString("C")</td>
+                    <td>
+                        <button class="btn btn-sm btn-info" @onclick="() => VerDetalle(v.VentaId)">Ver Detalle</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@if (ventaSeleccionada != null)
+{
+    <div class="modal fade show" tabindex="-1" style="display: block; background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Detalle de Venta #@ventaSeleccionada.VentaId</h5>
+                    <button type="button" class="btn-close" @onclick="CerrarDetalle"></button>
+                </div>
+                <div class="modal-body">
+                    <p><strong>Cliente:</strong> @(ventaSeleccionada.Cliente?.Nombre ?? "Público General")</p>
+                    <p><strong>Fecha:</strong> @ventaSeleccionada.FechaVenta.LocalDateTime.ToString("g")</p>
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Producto</th>
+                                <th>Cantidad</th>
+                                <th>Precio Unit.</th>
+                                <th>Subtotal</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var det in ventaSeleccionada.DetalleVentas)
+                            {
+                                <tr>
+                                    <td>@det.Producto.Nombre</td>
+                                    <td>@det.Cantidad</td>
+                                    <td>@det.PrecioUnitario.ToString("C")</td>
+                                    <td>@((det.Cantidad * det.PrecioUnitario).ToString("C"))</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                <div class="modal-footer">
+                    <h4>Total: @ventaSeleccionada.Total.ToString("C")</h4>
+                    <button type="button" class="btn btn-secondary" @onclick="CerrarDetalle">Cerrar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+
+@code {
+    private List<Venta>? ventas;
+    private Venta? ventaSeleccionada;
+    private DateTime fechaInicio = DateTime.Today.AddDays(-7);
+    private DateTime fechaFin = DateTime.Today;
+
+    private async Task CargarReporte()
+    {
+        var fechaInicioUtc = fechaInicio.Date.ToUniversalTime();
+        var fechaFinUtc = fechaFin.Date.AddDays(1).ToUniversalTime();
+
+        using var db = DbFactory.CreateDbContext();
+        ventas = await db.Ventas
+            .Include(v => v.Cliente) // Cargar el nombre del cliente
+            .Where(v => v.FechaVenta >= fechaInicioUtc && v.FechaVenta <= fechaFinUtc)
+            .OrderByDescending(v => v.FechaVenta)
+            .AsNoTracking()
+            .ToListAsync();
+    }
+
+    private async Task VerDetalle(long ventaId)
+    {
+        using var db = DbFactory.CreateDbContext();
+        ventaSeleccionada = await db.Ventas
+            .Include(v => v.Cliente)
+            .Include(v => v.DetalleVentas) // Cargar los detalles
+                .ThenInclude(d => d.Producto) // Cargar el nombre del producto en el detalle
+            .AsNoTracking()
+            .FirstOrDefaultAsync(v => v.VentaId == ventaId);
+    }
+
+    private void CerrarDetalle()
+    {
+        ventaSeleccionada = null;
+    }
+}

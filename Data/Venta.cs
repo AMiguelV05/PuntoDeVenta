@@ -20,7 +20,6 @@ public class Venta
     [Column("total")]
     public decimal Total { get; set; }
 
-    [Required]
     [Column("cliente_id")]
     public long? ClienteId { get; set; }
 
@@ -32,7 +31,7 @@ public class Venta
 
     // Una Venta pertenece a un Cliente
     [ForeignKey("ClienteId")]
-    public virtual Cliente Cliente { get; set; } = null!;
+    public virtual Cliente? Cliente { get; set; } = null!;
 
     // Una Venta es atendida por un Empleado
     [ForeignKey("EmpleadoId")]
