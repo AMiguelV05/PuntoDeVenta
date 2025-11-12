@@ -1,0 +1,178 @@
+@page "/registro"
+@rendermode InteractiveServer
+
+@layout EmptyLayout
+@using PuntoDeVenta.Data
+@using System.ComponentModel.DataAnnotations
+@using Microsoft.EntityFrameworkCore
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
+@inject NavigationManager NavManager
+@inject EstadoAutenticacionService AuthService
+
+<div class="row justify-content-center mt-5">
+    <div class="col-md-5">
+        <div class="card shadow-sm">
+            <div class="card-header">
+                <h3 class="text-center">Crear Cuenta de Empleado</h3>
+            </div>
+            <div class="card-body">
+                <EditForm Model="model" OnValidSubmit="HandleRegistro">
+                    <DataAnnotationsValidator />
+
+                    <div class="mb-3">
+                        <label class="form-label">Nombre Completo</label>
+                        <InputText class="form-control" @bind-Value="model.Nombre" />
+                        <ValidationMessage For="() => model.Nombre" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Teléfono</label>
+                        <InputText class="form-control" @bind-Value="model.Telefono" />
+                        <ValidationMessage For="() => model.Telefono" />
+                    </div>
+
+                    <hr />
+                    <h5 class="text-muted">Credenciales de Acceso</h5>
+
+                    <div class="mb-3">
+                        <label class="form-label">Nombre de Usuario</label>
+                        <InputText class="form-control" @bind-Value="model.Usuario" />
+                        <ValidationMessage For="() => model.Usuario" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Contraseña</label>
+                        <InputText type="password" class="form-control" @bind-Value="model.Contrasenia" />
+                        <ValidationMessage For="() => model.Contrasenia" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Confirmar Contraseña</label>
+                        <InputText type="password" class="form-control" @bind-Value="model.ConfirmarContrasenia" />
+                        <ValidationMessage For="() => model.ConfirmarContrasenia" />
+                    </div>
+
+                    @if (!string.IsNullOrEmpty(errorMessage))
+                    {
+                        <div class="alert alert-danger mt-3">@errorMessage</div>
+                    }
+                    @if (!string.IsNullOrEmpty(successMessage))
+                    {
+                        <div class="alert alert-success mt-3">@successMessage</div>
+                    }
+
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary" disabled="isLoading">
+                            @if (isLoading)
+                            {
+                                <span class="spinner-border spinner-border-sm"></span>
+                                <span> Creando...</span>
+                            }
+                            else
+                            {
+                                <span>Registrarse</span>
+                            }
+                        </button>
+                         <button type="button" class="btn btn-link" @onclick='() => NavManager.NavigateTo("/login")'>
+                            ¿Ya tienes cuenta? Inicia Sesión
+                        </button>
+                    </div>
+
+                </EditForm>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private RegistroModel model = new();
+    private bool isLoading = false;
+    private string? successMessage;
+    private string? errorMessage;
+    
+    // Usamos un "ViewModel" para el formulario
+    public class RegistroModel
+    {
+        [Required(ErrorMessage = "El nombre es obligatorio")]
+        public string Nombre { get; set; } = "";
+        
+        [Required(ErrorMessage = "El teléfono es obligatorio")]
+        public string Telefono { get; set; } = "";
+        
+        [Required(ErrorMessage = "El usuario es obligatorio")]
+        public string Usuario { get; set; } = "";
+        
+        [Required(ErrorMessage = "La contraseña es obligatoria")]
+        [MinLength(6, ErrorMessage = "La contraseña debe tener al menos 6 caracteres")]
+        public string Contrasenia { get; set; } = "";
+        
+        [Required(ErrorMessage = "Confirma tu contraseña")]
+        [Compare(nameof(Contrasenia), ErrorMessage = "Las contraseñas no coinciden")]
+        public string ConfirmarContrasenia { get; set; } = "";
+    }
+
+    protected override void OnInitialized()
+    {
+        // Si ya está logueado, que no vea el registro
+        if (AuthService.EstaLogueado)
+        {
+            NavManager.NavigateTo("/");
+        }
+    }
+
+    private async Task HandleRegistro()
+    {
+        isLoading = true;
+        successMessage = null;
+        errorMessage = null;
+
+        try
+        {
+            using var db = DbFactory.CreateDbContext();
+
+            // 1. Verificar que el usuario no exista
+            var usuarioExiste = await db.Empleados
+                .AnyAsync(e => e.Usuario.ToLower() == model.Usuario.ToLower());
+            
+            if (usuarioExiste)
+            {
+                errorMessage = "Error: El nombre de usuario ya está en uso.";
+                isLoading = false;
+                StateHasChanged();
+                return;
+            }
+
+            // 2. Hashear la contraseña
+            var contraseniaHash = BCrypt.Net.BCrypt.HashPassword(model.Contrasenia);
+
+            // 3. Crear la entidad Empleado con el puesto "en espera"
+            var nuevoEmpleado = new Empleado
+            {
+                Nombre = model.Nombre,
+                Puesto = "en espera", // <-- ¡Rol por defecto!
+                Telefono = model.Telefono,
+                Usuario = model.Usuario,
+                ContraseniaHash = contraseniaHash
+            };
+
+            // 4. Guardar en la BD
+            await db.Empleados.AddAsync(nuevoEmpleado);
+            await db.SaveChangesAsync();
+
+            successMessage = "¡Registro exitoso! Serás redirigido al login. Un administrador debe aprobar tu cuenta para que puedas vender.";
+            isLoading = false;
+            StateHasChanged();
+            
+            await Task.Delay(4000); // Esperar 4 seg para que lea el mensaje
+            NavManager.NavigateTo("/login");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error inesperado al registrar: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+}

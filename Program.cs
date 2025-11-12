@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using PuntoDeVenta.Data;
 using PuntoDeVenta.Components;
+using PuntoDeVenta.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -12,7 +13,7 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
 builder.Services.AddDbContextFactory<ApplicationDbContext>(options =>
     options.UseNpgsql(connectionString)
 );
-
+builder.Services.AddSingleton<EstadoAutenticacionService>();
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.

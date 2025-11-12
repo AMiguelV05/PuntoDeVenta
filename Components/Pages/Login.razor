@@ -1,0 +1,132 @@
+@page "/login"
+@rendermode InteractiveServer
+
+@layout EmptyLayout
+@using PuntoDeVenta.Data
+@using PuntoDeVenta.Services
+@using Microsoft.EntityFrameworkCore
+@using System.ComponentModel.DataAnnotations
+@using Microsoft.AspNetCore.Components
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
+@inject EstadoAutenticacionService AuthService
+@inject NavigationManager NavManager
+
+<div class="row justify-content-center mt-5">
+    <div class="col-md-4">
+        <div class="card shadow-sm">
+            <div class="card-header">
+                <h3 class="text-center">Iniciar Sesión</h3>
+            </div>
+            <div class="card-body">
+                <EditForm Model="loginModel" OnValidSubmit="HandleLogin">
+                    <DataAnnotationsValidator />
+                    
+                    <div class="mb-3">
+                        <label for="usuario" class="form-label">Usuario</label>
+                        <InputText id="usuario" class="form-control" @bind-Value="loginModel.Usuario" />
+                        <ValidationMessage For="() => loginModel.Usuario" />
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="contrasenia" class="form-label">Contraseña</label>
+                        <InputText id="contrasenia" type="password" class="form-control" @bind-Value="loginModel.Contrasenia" />
+                        <ValidationMessage For="() => loginModel.Contrasenia" />
+                    </div>
+
+                    @if (!string.IsNullOrEmpty(errorMensaje))
+                    {
+                        <div class="alert alert-danger">@errorMensaje</div>
+                    }
+
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary" disabled="isLoading">
+                            @if (isLoading)
+                            {
+                                <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                                <span> Verificando...</span>
+                            }
+                            else
+                            {
+                                <span>Entrar</span>
+                            }
+                        </button>
+                        <button type="button" class="btn btn-link" @onclick='() => NavManager.NavigateTo("/registro")'>
+                            ¿No tienes cuenta? Regístrate
+                        </button>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private LoginModel loginModel = new();
+    private string? errorMensaje;
+    private bool isLoading = false;
+
+    protected override void OnInitialized()
+    {
+        // Si ya está logueado, que no vea el login
+        if (AuthService.EstaLogueado)
+        {
+            NavManager.NavigateTo("/venta");
+        }
+    }
+
+    public class LoginModel
+    {
+        [Required(ErrorMessage = "El usuario es obligatorio.")]
+        public string Usuario { get; set; } = "";
+
+        [Required(ErrorMessage = "La contraseña es obligatoria.")]
+        public string Contrasenia { get; set; } = "";
+    }
+
+    private async Task HandleLogin()
+    {
+        isLoading = true;
+        errorMensaje = null;
+        
+        try
+        {
+            using var db = DbFactory.CreateDbContext();
+            var empleado = await db.Empleados
+                .AsNoTracking()
+                .FirstOrDefaultAsync(e => e.Usuario.ToLower() == loginModel.Usuario.ToLower());
+
+            if (empleado != null)
+            {
+                if (BCrypt.Net.BCrypt.Verify(loginModel.Contrasenia, empleado.ContraseniaHash))
+                {
+                    AuthService.IniciarSesion(empleado);
+                    
+                    // Redirigir a la terminal (o a "home" si no está aprobado)
+                    if(AuthService.EstaAprobado)
+                    {
+                        NavManager.NavigateTo("/venta");
+                    }
+                    else
+                    {
+                        NavManager.NavigateTo("/"); // A la página principal
+                    }
+                }
+                else
+                {
+                    errorMensaje = "Usuario o contraseña incorrectos.";
+                }
+            }
+            else
+            {
+                errorMensaje = "Usuario o contraseña incorrectos.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMensaje = $"Error inesperado: {ex.Message}";
+        }
+        
+        isLoading = false;
+        StateHasChanged();
+    }
+}

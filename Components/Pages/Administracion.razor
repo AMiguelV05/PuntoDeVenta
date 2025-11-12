@@ -1,0 +1,153 @@
+@page "/admin/gestion"
+@using PuntoDeVenta.Data
+@using PuntoDeVenta.Services
+@using Microsoft.EntityFrameworkCore
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
+@inject EstadoAutenticacionService AuthService
+@inject NavigationManager NavManager
+
+<h3>Gestión de Empleados</h3>
+
+@if (esAdmin)
+{
+    @if (listaEmpleados == null)
+    {
+        <p><em>Cargando empleados...</em></p>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table table-striped table-hover">
+                <thead class="table-dark">
+                    <tr>
+                        <th>ID</th>
+                        <th>Nombre</th>
+                        <th>Usuario</th>
+                        <th>Puesto Actual</th>
+                        <th>Cambiar Puesto</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var emp in listaEmpleados)
+                    {
+                        <tr>
+                            <td>@emp.EmpleadoId</td>
+                            <td>@emp.Nombre</td>
+                            <td>@emp.Usuario</td>
+                            <td>
+                                <span class="badge @GetBadgeClass(emp.Puesto)">
+                                    @emp.Puesto
+                                </span>
+                            </td>
+                            <td>
+                                @* No podemos cambiar el puesto del admin actual (nosotros mismos) *@
+                                @if (emp.EmpleadoId == AuthService.EmpleadoActual?.EmpleadoId)
+                                {
+                                    <small class="text-muted">(Admin actual)</small>
+                                }
+                                else
+                                {
+                                    <div class="input-group">
+                                        <select class="form-select form-select-sm" 
+                                                @onchange="(e) => SeleccionarPuesto(emp, e.Value?.ToString())">
+                                            <option value="">-- Asignar --</option>
+                                            <option value="Vendedor" selected="@(emp.Puesto == "Vendedor")">Vendedor</option>
+                                            <option value="Administrador" selected="@(emp.Puesto == "Administrador")">Administrador</option>
+                                            <option value="en espera" selected="@(emp.Puesto == "en espera")">en espera</option>
+                                        </select>
+                                    </div>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        
+        @if (!string.IsNullOrEmpty(statusMessage))
+        {
+            <div class="alert alert-success mt-3">@statusMessage</div>
+        }
+    }
+}
+else
+{
+    <p class="text-danger">No tienes permisos para ver esta página.</p>
+}
+
+@code {
+    private bool esAdmin = false;
+    private List<Empleado>? listaEmpleados;
+    private string? statusMessage;
+
+    // Los puestos disponibles que puede asignar el Admin
+    private List<string> puestosDisponibles = new() { "Vendedor", "Administrador", "en espera" };
+
+    protected override async Task OnInitializedAsync()
+    {
+        // --- 🔒 Seguridad ---
+        if (!AuthService.EsAdmin)
+        {
+            NavManager.NavigateTo("/login");
+            return;
+        }
+
+        esAdmin = true;
+        await CargarEmpleados();
+    }
+
+    private async Task CargarEmpleados()
+    {
+        using var db = DbFactory.CreateDbContext();
+        listaEmpleados = await db.Empleados
+                            .OrderBy(e => e.Nombre)
+                            .AsNoTracking()
+                            .ToListAsync();
+    }
+
+    private async Task SeleccionarPuesto(Empleado empleado, string? nuevoPuesto)
+    {
+        if (string.IsNullOrEmpty(nuevoPuesto) || empleado.Puesto == nuevoPuesto)
+        {
+            return;
+        }
+
+        // Validar que el puesto sea uno de los permitidos
+        if (!puestosDisponibles.Contains(nuevoPuesto))
+        {
+            return;
+        }
+
+        try
+        {
+            using var db = DbFactory.CreateDbContext();
+            
+            // Usamos ExecuteUpdate para una actualización eficiente
+            await db.Empleados
+                .Where(e => e.EmpleadoId == empleado.EmpleadoId)
+                .ExecuteUpdateAsync(setters => setters
+                    .SetProperty(e => e.Puesto, nuevoPuesto));
+            
+            statusMessage = $"Puesto de '{empleado.Nombre}' actualizado a '{nuevoPuesto}'.";
+
+            // Recargar la lista para mostrar el cambio
+            await CargarEmpleados();
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            statusMessage = $"Error al actualizar: {ex.Message}";
+        }
+    }
+
+    private string GetBadgeClass(string puesto)
+    {
+        return puesto switch
+        {
+            "Administrador" => "bg-primary",
+            "Vendedor" => "bg-success",
+            "en espera" => "bg-warning text-dark",
+            _ => "bg-secondary"
+        };
+    }
+}
