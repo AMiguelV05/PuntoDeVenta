@@ -2,16 +2,12 @@ using PuntoDeVenta.Data;
 
 namespace PuntoDeVenta.Services
 {
-    // Este servicio se registrará como Singleton para compartir el estado
-    // del empleado logueado en toda la aplicación.
     public class EstadoAutenticacionService
     {
         public Empleado? EmpleadoActual { get; private set; }
 
         // Evento para notificar a otros componentes cuando cambia el estado
         public event Action? OnChange;
-
-        // --- Propiedades de conveniencia ---
         
         /// ¿Hay un usuario logueado?
         public bool EstaLogueado => EmpleadoActual != null;

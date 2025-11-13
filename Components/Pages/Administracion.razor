@@ -1,10 +1,12 @@
 @page "/admin/gestion"
+@rendermode InteractiveServer
 @using PuntoDeVenta.Data
 @using PuntoDeVenta.Services
 @using Microsoft.EntityFrameworkCore
 @inject IDbContextFactory<ApplicationDbContext> DbFactory
 @inject EstadoAutenticacionService AuthService
 @inject NavigationManager NavManager
+@implements IDisposable
 
 <h3>Gestión de Empleados</h3>
 
@@ -40,7 +42,6 @@
                                 </span>
                             </td>
                             <td>
-                                @* No podemos cambiar el puesto del admin actual (nosotros mismos) *@
                                 @if (emp.EmpleadoId == AuthService.EmpleadoActual?.EmpleadoId)
                                 {
                                     <small class="text-muted">(Admin actual)</small>
@@ -49,11 +50,12 @@
                                 {
                                     <div class="input-group">
                                         <select class="form-select form-select-sm" 
+                                                value = "@emp.Puesto"
                                                 @onchange="(e) => SeleccionarPuesto(emp, e.Value?.ToString())">
                                             <option value="">-- Asignar --</option>
-                                            <option value="Vendedor" selected="@(emp.Puesto == "Vendedor")">Vendedor</option>
-                                            <option value="Administrador" selected="@(emp.Puesto == "Administrador")">Administrador</option>
-                                            <option value="en espera" selected="@(emp.Puesto == "en espera")">en espera</option>
+                                            <option value="Vendedor">Vendedor</option>
+                                            <option value="Administrador">Administrador</option>
+                                            <option value="en espera">en espera</option>
                                         </select>
                                     </div>
                                 }
@@ -79,13 +81,14 @@ else
     private bool esAdmin = false;
     private List<Empleado>? listaEmpleados;
     private string? statusMessage;
+    private System.Timers.Timer? statusTimer;
 
     // Los puestos disponibles que puede asignar el Admin
     private List<string> puestosDisponibles = new() { "Vendedor", "Administrador", "en espera" };
 
     protected override async Task OnInitializedAsync()
     {
-        // --- 🔒 Seguridad ---
+        // Seguridad
         if (!AuthService.EsAdmin)
         {
             NavManager.NavigateTo("/login");
@@ -122,22 +125,46 @@ else
         {
             using var db = DbFactory.CreateDbContext();
             
-            // Usamos ExecuteUpdate para una actualización eficiente
-            await db.Empleados
-                .Where(e => e.EmpleadoId == empleado.EmpleadoId)
-                .ExecuteUpdateAsync(setters => setters
-                    .SetProperty(e => e.Puesto, nuevoPuesto));
-            
-            statusMessage = $"Puesto de '{empleado.Nombre}' actualizado a '{nuevoPuesto}'.";
+            var empleadoDb = await db.Empleados.FindAsync(empleado.EmpleadoId);
 
-            // Recargar la lista para mostrar el cambio
-            await CargarEmpleados();
+            if (empleadoDb == null)
+            {
+                statusMessage = "Error: Empleado no encontrado en la base de datos.";
+                return;
+            }
+            empleadoDb.Puesto = nuevoPuesto;
+            await db.SaveChangesAsync();
+            empleado.Puesto = nuevoPuesto; // Actualizar en la lista local
+            statusMessage = $"Puesto de {empleado.Nombre} actualizado a '{nuevoPuesto}'.";
+            IniciarTimerMensaje();
             StateHasChanged();
         }
         catch (Exception ex)
         {
             statusMessage = $"Error al actualizar: {ex.Message}";
         }
+    }
+
+    private void IniciarTimerMensaje()
+    {
+        // Si ya hay un timer, lo reseteamos
+        statusTimer?.Stop();
+        statusTimer?.Dispose();
+
+        statusTimer = new System.Timers.Timer(3000); // 3 segundos
+        statusTimer.Elapsed += (sender, e) =>
+        {
+            InvokeAsync(() =>
+            {
+                statusMessage = null;
+                StateHasChanged();
+            });
+            
+            // Detener y limpiar el timer
+            statusTimer?.Stop();
+            statusTimer?.Dispose();
+        };
+        statusTimer.Start();
     }
 
     private string GetBadgeClass(string puesto)
@@ -149,5 +176,11 @@ else
             "en espera" => "bg-warning text-dark",
             _ => "bg-secondary"
         };
+    }
+
+    public void Dispose()
+    {
+        AuthService.OnChange -= StateHasChanged;
+        statusTimer?.Dispose();
     }
 }

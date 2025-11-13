@@ -1,6 +1,17 @@
 ﻿@using PuntoDeVenta.Services
+@rendermode InteractiveServer
 @inject EstadoAutenticacionService AuthService
 @inject NavigationManager NavManager
+@implements IDisposable
+
+<div class="top-row ps-3 navbar navbar-dark">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="">PuntoDeVenta</a>
+    </div>
+</div>
+
+<input type="checkbox" title="Navigation menu" class="navbar-toggler" />
+
 
 <div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
     <nav class="flex-column">
@@ -23,15 +34,30 @@
         {
             <!-- --- USUARIO LOGUEADO --- -->
             <div class="nav-item px-3">
-                <div class="nav-link">
-                    <span class="bi bi-person-circle" aria-hidden="true"></span> Hola, @AuthService.EmpleadoActual?.Nombre
-                    <br />
-                    <span class="badge @GetBadgeClass(AuthService.EmpleadoActual?.Puesto)">
-                        @AuthService.EmpleadoActual?.Puesto
-                    </span>
+                <div style="color: #d7d7d7; padding: 0.75rem 0.8rem; line-height: 1.4;"> 
+                    <div>
+                        <span class="bi bi-person-circle" aria-hidden="true" 
+                              style="width: 1.25rem; height: auto; margin-right: 0.75rem; position: relative; top: 2px;">
+                        </span> 
+                        Hola, 
+                    </div>
+                    <div style="padding-left: 2.1rem; margin-top: 0.1rem;">
+                        <strong>@AuthService.EmpleadoActual?.Nombre</strong>
+                    </div>
+                    <div style="padding-left: 2.1rem; margin-top: 0.35rem;">
+                        <span class="badge @GetBadgeClass(AuthService.EmpleadoActual?.Puesto)">
+                            @AuthService.EmpleadoActual?.Puesto
+                        </span>
+                    </div>
                 </div>
             </div>
             
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
+                    <i class="bi bi-house-door-fill" aria-hidden="true"></i> Home
+                </NavLink>
+             </div>
+
             @if(AuthService.EstaAprobado)
             {
                  <!-- Solo mostrar si la cuenta está aprobada -->

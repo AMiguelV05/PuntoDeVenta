@@ -87,21 +87,36 @@
     {
         isLoading = true;
         errorMensaje = null;
+        StateHasChanged();
+
+        Empleado? empleado = null;
+        string? exceptionMessage = null;
         
         try
         {
             using var db = DbFactory.CreateDbContext();
-            var empleado = await db.Empleados
+            empleado = await db.Empleados
                 .AsNoTracking()
                 .FirstOrDefaultAsync(e => e.Usuario.ToLower() == loginModel.Usuario.ToLower());
+        }
+        catch (Exception ex)
+        {
+            exceptionMessage = ex.Message;
+        }
 
-            if (empleado != null)
+        // InvokeAsync para volver al hilo de UI (Dispatcher)
+        await InvokeAsync(() =>
+        {
+            if (exceptionMessage != null)
+            {
+                errorMensaje = $"Error de base de datos: {exceptionMessage}";
+            }
+            else if (empleado != null)
             {
                 if (BCrypt.Net.BCrypt.Verify(loginModel.Contrasenia, empleado.ContraseniaHash))
                 {
                     AuthService.IniciarSesion(empleado);
                     
-                    // Redirigir a la terminal (o a "home" si no está aprobado)
                     if(AuthService.EstaAprobado)
                     {
                         NavManager.NavigateTo("/venta");
@@ -118,15 +133,12 @@
             }
             else
             {
+                // El empleado no fue encontrado en la base de datos
                 errorMensaje = "Usuario o contraseña incorrectos.";
             }
-        }
-        catch (Exception ex)
-        {
-            errorMensaje = $"Error inesperado: {ex.Message}";
-        }
-        
-        isLoading = false;
-        StateHasChanged();
+
+            isLoading = false;
+            StateHasChanged(); // Actualiza la UI para ocultar el spinner y mostrar el error
+        });
     }
 }
