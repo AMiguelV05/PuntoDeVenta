@@ -5,6 +5,8 @@
 @inject IDbContextFactory<ApplicationDbContext> DbFactory
 @inject IJSRuntime JSRuntime
 
+<PageTitle>Gestión de Productos</PageTitle>
+
 <h3>Gestión de Productos</h3>
 <EditForm Model="productoModel" OnValidSubmit="GuardarProducto" FormName="gestionarProductos">
     <DataAnnotationsValidator />
