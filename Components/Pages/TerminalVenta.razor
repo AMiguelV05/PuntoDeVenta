@@ -5,9 +5,10 @@
 @inject IDbContextFactory<ApplicationDbContext> DbFactory
 @inject IJSRuntime JSRuntime
 @inject NavigationManager NavManager
+@inject EstadoAutenticacionService AuthService
+@inject NotificationService Notifier
 
 <PageTitle>Terminal de Ventas</PageTitle>
-
 
 <h3>Terminal de Venta</h3>
 
@@ -126,6 +127,17 @@
 
     protected override async Task OnInitializedAsync()
     {
+        if (AuthService.EmpleadoActual == null)
+        {
+            NavManager.NavigateTo("/login");
+            return;
+        }
+        if (AuthService.EmpleadoActual.Puesto == "en espera")
+        {
+            _ = Notifier.SetMessage("Acceso no autorizado. Por favor, espera a que un Admin te conceda el acceso.", "warning", 3000);
+            NavManager.NavigateTo("/");
+            return;
+        }
         // Cargar clientes para el selector
         using var db = DbFactory.CreateDbContext();
         clientesDisponibles = await db.Clientes.AsNoTracking().OrderBy(c => c.Nombre).ToListAsync();

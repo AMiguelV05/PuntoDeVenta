@@ -1,0 +1,49 @@
+@rendermode InteractiveServer
+@implements IDisposable
+@inject NotificationService Notifier
+
+<div class="fixed-top m-3" style="z-index:1050; min-width: 280px;">
+    @if (Notifier.Visible)
+    {
+        <div class="alert alert-dismissible fade show @AlertClass()" role="alert">
+            <div><strong>@(Notifier.Tipo.ToUpper())</strong> - @Notifier.Message</div>
+            <div class="small text-muted">@TimeStamp</div>
+            <button type="button" class="btn-close" aria-label="Close" @onclick="Close"></button>
+        </div>
+    }
+</div>
+
+@code {
+    private string TimeStamp => DateTime.Now.ToString("HH:mm:ss.fff");
+    protected override void OnInitialized()
+    {
+        // Suscribimos un handler que llama a StateHasChanged en el hilo UI
+        Notifier.OnChange += NotifyHandler;
+    }
+
+    private void NotifyHandler()
+    {
+        // Asegurarnos de ejecutar la re-renderización en el contexto de Blazor
+        InvokeAsync(StateHasChanged);
+    }
+    private string AlertClass()
+    {
+        return Notifier.Tipo switch
+        {
+            "success" => "alert-success",
+            "error" => "alert-danger",
+            "warning" => "alert-warning",
+            _ => "alert-info",
+        };
+    }
+
+    private void Close()
+    {
+        Notifier.ClearMessage();
+    }
+
+    public void Dispose()
+    {
+        Notifier.OnChange -= NotifyHandler;
+    }
+}

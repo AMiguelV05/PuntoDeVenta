@@ -1,6 +1,5 @@
 @page "/login"
 @rendermode InteractiveServer
-
 @layout EmptyLayout
 @using PuntoDeVenta.Data
 @using PuntoDeVenta.Services
@@ -10,6 +9,7 @@
 @inject IDbContextFactory<ApplicationDbContext> DbFactory
 @inject EstadoAutenticacionService AuthService
 @inject NavigationManager NavManager
+@inject NotificationService Notifier
 
 <PageTitle>Iniciar Sesión</PageTitle>
 
@@ -65,15 +65,23 @@
 @code {
     private LoginModel loginModel = new();
     private string? errorMensaje;
+    private string? statusMessage;
     private bool isLoading = false;
 
     protected override void OnInitialized()
     {
-        // Si ya está logueado, que no vea el login
         if (AuthService.EstaLogueado)
         {
-            NavManager.NavigateTo("/venta");
+            if (AuthService.EstaAprobado)
+            {
+                NavManager.NavigateTo("/venta");
+            }
+            else{
+                _ = Notifier.SetMessage("Tu cuenta aún no ha sido aprobada.\nIngresa sesión con otra cuenta o intenta más tarde.", "warning", 5000);
+                NavManager.NavigateTo("/");
+            }
         }
+        _ = Notifier.SetMessage("Bienvenido! Por favor, inicia sesión antes de continuar.", "succes",3000);
     }
 
     public class LoginModel
@@ -91,56 +99,42 @@
         errorMensaje = null;
         StateHasChanged();
 
-        Empleado? empleado = null;
-        string? exceptionMessage = null;
-        
         try
         {
             using var db = DbFactory.CreateDbContext();
-            empleado = await db.Empleados
+            var empleado = await db.Empleados
                 .AsNoTracking()
                 .FirstOrDefaultAsync(e => e.Usuario.ToLower() == loginModel.Usuario.ToLower());
-        }
-        catch (Exception ex)
-        {
-            exceptionMessage = ex.Message;
-        }
 
-        // InvokeAsync para volver al hilo de UI (Dispatcher)
-        await InvokeAsync(() =>
-        {
-            if (exceptionMessage != null)
+            if (empleado == null)
             {
-                errorMensaje = $"Error de base de datos: {exceptionMessage}";
+                errorMensaje = "Usuario o contraseña incorrectos.";
             }
-            else if (empleado != null)
-            {
-                if (BCrypt.Net.BCrypt.Verify(loginModel.Contrasenia, empleado.ContraseniaHash))
-                {
-                    AuthService.IniciarSesion(empleado);
-                    
-                    if(AuthService.EstaAprobado)
-                    {
-                        NavManager.NavigateTo("/venta");
-                    }
-                    else
-                    {
-                        NavManager.NavigateTo("/"); // A la página principal
-                    }
-                }
-                else
-                {
-                    errorMensaje = "Usuario o contraseña incorrectos.";
-                }
+            else if (!BCrypt.Net.BCrypt.Verify(loginModel.Contrasenia, empleado.ContraseniaHash)){
+                errorMensaje = "Usuario o contraseña incorrectos.";
             }
             else
             {
-                // El empleado no fue encontrado en la base de datos
-                errorMensaje = "Usuario o contraseña incorrectos.";
-            }
+                AuthService.IniciarSesion(empleado);
 
+                if (AuthService.EstaAprobado)
+                {
+                    NavManager.NavigateTo("/venta");
+                }
+                else
+                {
+                    NavManager.NavigateTo("/");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            var exceptionMessage = ex.Message;
+        }
+        finally
+        {
             isLoading = false;
-            StateHasChanged(); // Actualiza la UI para ocultar el spinner y mostrar el error
-        });
+            StateHasChanged();
+        }
     }
 }
