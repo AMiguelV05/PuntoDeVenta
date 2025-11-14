@@ -1,0 +1,99 @@
+@page "/tutorial"
+@rendermode InteractiveServer
+@using PuntoDeVenta.Services
+@inject EstadoAutenticacionService AuthService
+@inject NavigationManager NavManager
+@inject NotificationService Notifier
+
+<PageTitle>Tutorial del POS</PageTitle>
+
+<div class="row justify-content-center">
+    <div class="col-md-10 col-lg-8">
+        <h3 class="mb-3">Guía Rápida: Cómo Usar la Terminal de Venta</h3>
+        <p>¡Bienvenido! Sigue estos pasos para completar una venta con éxito.</p>
+
+        <div class="accordion" id="tutorialAccordion">
+
+            <!-- Paso 1: Iniciar Sesión -->
+            <div class="accordion-item">
+                <h2 class="accordion-header">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseUno">
+                        <i class="bi bi-box-arrow-in-right me-2"></i> <strong>Paso 1:</strong> Iniciar Sesión y Acceder
+                    </button>
+                </h2>
+                <div id="collapseUno" class="accordion-collapse collapse" data-bs-parent="#tutorialAccordion">
+                    <div class="accordion-body">
+                        <p>Cuando te registras por primera vez, tu cuenta tiene el estado <strong>"en espera"</strong>. <i>(Podrás ver el estado actual de tu cuenta, arriba a la izquierda, debajo de tu nombre.)</i></p>
+                        <p>Un <strong>Administrador</strong> debe ir a "Gestión de Empleados" y cambiar tu puesto a "Vendedor" o "Administrador" para que puedas acceder a la terminal. Si ya puedes ver el enlace "Terminal Venta" en el menú, ¡tu cuenta ya fue aprobada!</p>
+                        <p>Si tu cuenta ya fue aprobada, ¡ignora este paso!</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Paso 2: Buscar Productos -->
+            <div class="accordion-item">
+                <h2 class="accordion-header">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseDos">
+                        <i class="bi bi-search me-2"></i> <strong>Paso 2:</strong> Buscar el Producto
+                    </button>
+                </h2>
+                <div id="collapseDos" class="accordion-collapse collapse" data-bs-parent="#tutorialAccordion">
+                    <div class="accordion-body">
+                        <p>Ve a la página <strong>"Terminal Venta"</strong>.</p>
+                        <p>Usa la barra de <strong>"Buscar Producto"</strong> en la parte superior. Puedes escribir el nombre del producto (ej: "Coca Cola") o su código (SKU).</p>
+                        <p>El sistema te mostrará una lista de resultados debajo de la barra de búsqueda. Verás el nombre, el stock disponible y el precio.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Paso 3: Agregar al Carrito -->
+            <div class="accordion-item">
+                <h2 class="accordion-header">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTres">
+                        <i class="bi bi-cart-plus-fill me-2"></i> <strong>Paso 3:</strong> Armar el Carrito
+                    </button>
+                </h2>
+                <div id="collapseTres" class="accordion-collapse collapse" data-bs-parent="#tutorialAccordion">
+                    <div class="accordion-body">
+                        <p><strong>Para Agregar:</strong> Haz clic en el botón verde <strong>"Agregar"</strong> al lado del producto que encontraste en la búsqueda.</p>
+                        <p><strong>Ajustar Cantidad:</strong> El producto aparecerá en la tabla "Carrito Actual". Puedes cambiar el número en la casilla <strong>"Cantidad"</strong> si el cliente lleva más de uno. <i>(Sientete libre de unsar las flechas para aumentar/disminuir de uno en uno o escribir directamente la cantidad con el teclado)</i></p>
+                        <p><strong>Quitar un Producto:</strong> Si te equivocaste o el cliente ya no lo quiere, presiona el botón rojo <strong>"Quitar"</strong>.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Paso 4: Finalizar la Venta -->
+            <div class="accordion-item">
+                <h2 class="accordion-header">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseCuatro">
+                        <i class="bi bi-cash-coin me-2"></i> <strong>Paso 4:</strong> Cobrar y Finalizar
+                    </button>
+                </h2>
+                <div id="collapseCuatro" class="accordion-collapse collapse" data-bs-parent="#tutorialAccordion">
+                    <div class="accordion-body">
+                        <p>En el panel de la derecha ("Resumen de Venta"), verás el total a pagar (Subtotal + IVA).</p>
+                        <ol>
+                            <li><strong>Asignar Cliente (Opcional):</strong> Si es un cliente frecuente que ya está registrado, puedes seleccionarlo en el menú desplegable "Cliente:". Si no, simplemente déjalo como <strong>"(Público General)"</strong>.</li>
+                            <li><strong>Cobrar:</strong> Verifica el monto <strong>Total</strong> con el cliente y procede al cobro.</li>
+                            <li><strong>Finalizar:</strong> Presiona el botón verde grande <strong>"Cobrar y Finalizar Venta"</strong>.</li>
+                        </ol>
+                        <p class="mt-2">¡Y listo! El sistema guardará la venta, descontará los productos del inventario (stock) y limpiará la pantalla para la siguiente venta.</p>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+@code {
+    protected override void OnInitialized()
+    {
+        // Seguridad: Asegurarse de que el empleado esté logueado y aprobado
+        if (AuthService.EmpleadoActual == null)
+        {
+            NavManager.NavigateTo("/login");
+            return;
+        }
+    }
+}
