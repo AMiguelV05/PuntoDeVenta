@@ -1,5 +1,5 @@
-﻿@using PuntoDeVenta.Components.Compartido
-@inherits LayoutComponentBase
+﻿@inherits LayoutComponentBase
+@using PuntoDeVenta.Components.Compartido
 @inject NotificationService Notifier
 
 <div class="page">
@@ -9,11 +9,9 @@
 
     <main>
         <div class="top-row px-4">
-            <div class="nav-item px-3">
                 <a class="btn btn-outline-primary" href="tutorial">
                     <i class="bi bi-info-circle-fill" aria-hidden="true"></i> Ayuda (Tutorial)
                 </a>
-            </div>
         </div>
 
         <article class="content px-4">
@@ -28,4 +26,3 @@
     <a href="" class="reload">Reload</a>
     <a class="dismiss">🗙</a>
 </div>
-}
