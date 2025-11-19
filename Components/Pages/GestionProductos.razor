@@ -3,76 +3,184 @@
 @using Microsoft.EntityFrameworkCore
 @using PuntoDeVenta.Data
 @inject IDbContextFactory<ApplicationDbContext> DbFactory
+@inject NotificationService Notifier
 @inject IJSRuntime JSRuntime
 
 <PageTitle>Gestión de Productos</PageTitle>
 
-<h3>Gestión de Productos</h3>
-<EditForm Model="productoModel" OnValidSubmit="GuardarProducto" FormName="gestionarProductos">
-    <DataAnnotationsValidator />
-    <h4>@(editando ? "Editar Producto" : "Nuevo Producto")</h4>
-    <div class="card mb-4">
-        <div class="card-body">
-            <div class="mb-3">
-                <label>Nombre:</label>
-                <InputText @bind-Value="productoModel.Nombre" class="form-control" />
-                <ValidationMessage For="@(() => productoModel.Nombre)" />
-            </div>
-            <div class="row">
-                <div class="col-md-6 mb-3">
-                    <label>Precio Venta:</label>
-                    <InputNumber TValue="decimal" @bind-Value="productoModel.PrecioVenta" class="form-control" />
-                     <ValidationMessage For="@(() => productoModel.PrecioVenta)" />
+<div class="container-fluid pt-3">
+    
+    <!-- Encabezado y Botón de Nuevo -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h3 class="text-primary m-0">
+            <i class="bi bi-box-seam me-2"></i>Inventario de Productos
+        </h3>
+        <button class="btn btn-success shadow-sm" @onclick="IniciarNuevoProducto">
+            <i class="bi bi-plus-lg me-2"></i>Nuevo Producto
+        </button>
+    </div>
+
+    <!-- Tarjeta Principal (Tabla) -->
+    <div class="card shadow-lg border-0">
+        <div class="card-header bg-white py-3">
+            <div class="row align-items-center">
+                <div class="col">
+                    <div class="input-group">
+                        <span class="input-group-text bg-light text-primary border-end-0">
+                            <i class="bi bi-search"></i>
+                        </span>
+                        <input type="text" 
+                               class="form-control border-start-0" 
+                               placeholder="Escribe para filtrar. Presiona ENTER para editar coincidencia SKU exacta" 
+                               @bind="terminoBusqueda" 
+                               @onkeyup="HandleKeyUp"
+                               @oninput="AlEscribir" />
+
+                         <button class="btn btn-outline-secondary" type="button" @onclick="LimpiarBusqueda">
+                             <i class="bi bi-x-lg"></i>
+                         </button>
+                    </div>
                 </div>
-                <div class="col-md-6 mb-3">
-                    <label>Stock Actual:</label>
-                    <InputNumber TValue="decimal" @bind-Value="productoModel.StockActual" class="form-control" />
-                     <ValidationMessage For="@(() => productoModel.StockActual)" />
-                </div>
             </div>
-            <button type="submit" class="btn btn-primary">@(editando ? "Actualizar" : "Crear")</button>
-            @if (editando)
+        </div>
+        <div class="card-body p-0">
+            @if (todosLosProductos == null)
             {
-                <button type="button" class="btn btn-secondary" @onclick="CancelarEdicion">Cancelar</button>
+                <div class="p-4 text-center text-muted">
+                    <div class="spinner-border text-primary mb-2" role="status"></div>
+                    <p>Cargando inventario...</p>
+                </div>
+            }
+            else if (!productosFiltrados.Any())
+            {
+                 <div class="p-4 text-center text-muted">
+                    <i class="bi bi-inbox display-4 d-block mb-2"></i>
+                    <p class="fs-5">No se encontraron productos con "<strong>@terminoBusqueda</strong>"</p>
+                    <button class="btn btn-sm btn-outline-primary mt-2" @onclick="LimpiarBusqueda">Mostrar Todos</button>
+                </div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover table-striped align-middle mb-0">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>SKU / Nombre</th>
+                                <th class="text-center">Stock</th>
+                                <th class="text-center">Precio Venta</th>
+                                <th class="text-center" style="width: 150px;">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var prod in productosFiltrados)
+                            {
+                                <tr>
+                                    <td>
+                                        @if(!string.IsNullOrEmpty(prod.CodigoSku))
+                                        {
+                                            <span class="badge bg-light text-dark border mb-1">
+                                                <i class="bi bi-upc-scan me-1"></i>@prod.CodigoSku
+                                            </span>
+                                            <br/>
+                                        }
+                                        <span class="fw-bold text-secondary">@prod.Nombre</span>
+                                    </td>
+                                    <td class="text-center">
+                                        @if(prod.StockActual <= 5)
+                                        {
+                                            <span class="badge bg-danger rounded-pill">@prod.StockActual (Bajo)</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-info text-dark rounded-pill">@prod.StockActual</span>
+                                        }
+                                    </td>
+                                    <td class="text-end text-success fw-bold">@prod.PrecioVenta.ToString("C")</td>
+                                    <td class="text-center">
+                                        <div class="btn-group shadow-sm" role="group">
+                                            <button class="btn btn-sm btn-outline-primary" @onclick="() => PrepararEdicion(prod)" title="Editar">
+                                                <i class="bi bi-pencil-square"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-danger" @onclick="() => EliminarProducto(prod.ProductoId)" title="Eliminar">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                <div class="card-footer bg-light text-muted small">
+                    Mostrando @productosFiltrados.Count de @todosLosProductos.Count productos registrados.
+                </div>
             }
         </div>
     </div>
-</EditForm>
+</div>
 
-@if (productos == null)
-{
-    <p><em>Cargando...</em></p>
-}
-else
-{
-    <table class="table table-striped">
-        <thead>
-            <tr>
-                <th>Nombre</th>
-                <th>Precio Venta</th>
-                <th>Stock</th>
-                <th>Acciones</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var prod in productos)
-            {
-                <tr>
-                    <td>@prod.Nombre</td>
-                    <td>@prod.PrecioVenta.ToString("C")</td>
-                    <td>@prod.StockActual</td>
-                    <td>
-                        <button class="btn btn-sm btn-warning" @onclick="() => PrepararEdicion(prod)">Editar</button>
-                        <button class="btn btn-sm btn-danger" @onclick="() => EliminarProducto(prod.ProductoId)">Eliminar</button>
-                    </td>
-                </tr>
-            }
-        </tbody>
-    </table>
-}
+<!-- Modal de Agregar/Editar -->
+<div class="modal fade" id="productoModal" tabindex="-1" aria-labelledby="productoModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header @(editando ? "bg-warning" : "bg-success") text-white">
+                <h5 class="modal-title" id="productoModalLabel">
+                    <i class="bi @(editando ? "bi-pencil-square" : "bi-plus-circle") me-2"></i>
+                    @(editando ? "Editar Producto" : "Nuevo Producto")
+                </h5>
+                <button type="button" class="btn-close btn-close-white" @onclick="CerrarModal" aria-label="Close"></button>
+            </div>
+            
+            <EditForm Model="productoModel" OnValidSubmit="GuardarProducto" FormName="gestionarProductos">
+                <DataAnnotationsValidator />
+                
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-secondary">Código SKU (Opcional):</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-upc"></i></span>
+                            <InputText @bind-Value="productoModel.CodigoSku" class="form-control" placeholder="Ej. 750123456" />
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-secondary">Nombre del Producto:</label>
+                        <InputText @bind-Value="productoModel.Nombre" class="form-control" placeholder="Ej. Coca Cola 600ml" />
+                        <ValidationMessage For="@(() => productoModel.Nombre)" class="text-danger small" />
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold text-secondary">Precio Venta:</label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <InputNumber TValue="decimal" @bind-Value="productoModel.PrecioVenta" class="form-control" />
+                            </div>
+                            <ValidationMessage For="@(() => productoModel.PrecioVenta)" class="text-danger small" />
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold text-secondary">Stock Actual:</label>
+                            <InputNumber TValue="decimal" @bind-Value="productoModel.StockActual" class="form-control" />
+                            <ValidationMessage For="@(() => productoModel.StockActual)" class="text-danger small" />
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary" @onclick="CerrarModal">Cancelar</button>
+                    <button type="submit" class="btn @(editando ? "btn-warning" : "btn-success") px-4">
+                        @(editando ? "Actualizar Cambios" : "Guardar Producto")
+                    </button>
+                </div>
+            </EditForm>
+        </div>
+    </div>
+</div>
 
 @code {
-    private List<Producto>? productos;
+    private string terminoBusqueda = "";
+    private List<Producto>? todosLosProductos;
+    private List<Producto> productosFiltrados = new();
     private Producto productoModel = new();
     private bool editando = false;
 
@@ -84,11 +192,101 @@ else
     private async Task CargarProductos()
     {
         using var db = DbFactory.CreateDbContext();
-        productos = await db.Productos.AsNoTracking().OrderBy(p => p.Nombre).ToListAsync();
+        todosLosProductos = await db.Productos.AsNoTracking().OrderBy(p => p.Nombre).ToListAsync();
+        productosFiltrados = todosLosProductos.ToList();
+    }
+    private async Task HandleKeyUp(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await BuscarParaEditar();
+        }
+    }
+    private void AlEscribir(ChangeEventArgs e)
+    {
+        terminoBusqueda = e.Value?.ToString() ?? "";
+        var todosLosProductosSeguro = todosLosProductos ?? new List<Producto>();
+
+        if (string.IsNullOrWhiteSpace(terminoBusqueda))
+        {
+            productosFiltrados = todosLosProductosSeguro.ToList();
+        }
+        else
+        {
+            productosFiltrados = todosLosProductosSeguro
+                .Where(p => p.Nombre.Contains(terminoBusqueda, StringComparison.OrdinalIgnoreCase) ||
+                            (p.CodigoSku != null && p.CodigoSku.Contains(terminoBusqueda, StringComparison.OrdinalIgnoreCase)))
+                .ToList();
+        }
+    }
+    private async Task BuscarParaEditar()
+    {
+        if(string.IsNullOrEmpty(terminoBusqueda))
+        {
+            return;
+        }
+
+        var todosLosProductosSeguro = todosLosProductos ?? new List<Producto>();
+
+        var matchExacto = todosLosProductosSeguro
+            .FirstOrDefault(p => p.CodigoSku != null && p.CodigoSku.Equals(terminoBusqueda, StringComparison.OrdinalIgnoreCase));
+            
+         if (matchExacto != null)
+        {
+            terminoBusqueda = "";
+            productosFiltrados = todosLosProductosSeguro.ToList();
+            await PrepararEdicion(matchExacto);
+        }
+        else
+        {
+           _ = Notifier.SetMessage("No se encontró ningún producto con el código SKU proporcionado.", "warning");
+        }
+    }
+    /*private async Task FiltrarProductos(ChangeEventArgs e)
+    {
+        var todosLosProductosSeguro = todosLosProductos ?? new List<Producto>();
+        terminoBusqueda = e.Value?.ToString() ?? "";
+        if (string.IsNullOrWhiteSpace(terminoBusqueda))
+        {
+            productosFiltrados = todosLosProductosSeguro.ToList();
+        }
+        else
+        {
+            productosFiltrados = todosLosProductosSeguro
+                .Where(p => p.Nombre.Contains(terminoBusqueda, StringComparison.OrdinalIgnoreCase) ||
+                            (p.CodigoSku != null && p.CodigoSku.Contains(terminoBusqueda, StringComparison.OrdinalIgnoreCase)))
+                .ToList();
+        }
+
+        if (!string.IsNullOrEmpty(terminoBusqueda))
+        {
+            var matchExacto = todosLosProductosSeguro
+                .FirstOrDefault(p => p.CodigoSku != null && p.CodigoSku.Equals(terminoBusqueda, StringComparison.OrdinalIgnoreCase));
+            
+            if (matchExacto != null)
+            {
+                terminoBusqueda = "";
+                productosFiltrados = todosLosProductosSeguro.ToList();
+                _ = PrepararEdicion(matchExacto);
+            }
+        }
+    }*/
+
+    private void LimpiarBusqueda()
+    {
+        terminoBusqueda = "";
+        productosFiltrados = todosLosProductos?.ToList() ?? new List<Producto>();
+    }
+    private async Task IniciarNuevoProducto()
+    {
+        productoModel = new();
+        editando = false;
+        await JSRuntime.InvokeVoidAsync("bootstrapModalFunctions.show", "productoModal");
     }
 
-    private void PrepararEdicion(Producto productoAEditar)
+    private async Task PrepararEdicion(Producto productoAEditar)
     {
+        // Crear una copia para editar sin afectar la lista visual inmediatamente
         productoModel = new Producto
         {
             ProductoId = productoAEditar.ProductoId,
@@ -97,48 +295,68 @@ else
             StockActual = productoAEditar.StockActual,
             Descripcion = productoAEditar.Descripcion,
             PrecioCompra = productoAEditar.PrecioCompra,
-            CategoriaId = productoAEditar.CategoriaId
+            CategoriaId = productoAEditar.CategoriaId,
+            CodigoSku = productoAEditar.CodigoSku
         };
         editando = true;
+        await JSRuntime.InvokeVoidAsync("bootstrapModalFunctions.show", "productoModal");
+    }
+
+    private async Task CerrarModal()
+    {
+        productoModel = new();
+        editando = false;
+        await JSRuntime.InvokeVoidAsync("bootstrapModalFunctions.hide", "productoModal");
     }
 
     private async Task GuardarProducto()
     {
         using var db = DbFactory.CreateDbContext();
 
-        if (editando) // Actualizar (Cambio)
+        if (editando)
         {
             db.Productos.Update(productoModel);
         }
-        else // Crear (Alta)
+        else
         {
             await db.Productos.AddAsync(productoModel);
         }
 
         await db.SaveChangesAsync();
         await CargarProductos();
-        CancelarEdicion();
+        await CerrarModal();
     }
 
     private async Task EliminarProducto(long id)
     {
-        var confirmado = await JSRuntime.InvokeAsync<bool>("confirm", $"¿Estás seguro que quieres eliminar este producto?");
+        var confirmado = await JSRuntime.InvokeAsync<bool>("confirm", $"¿Estás seguro que quieres eliminar este producto? Esta acción no se puede deshacer.");
         if (confirmado)
         {
             using var db = DbFactory.CreateDbContext();
             var producto = await db.Productos.FindAsync(id);
             if (producto != null)
             {
-                db.Productos.Remove(producto); // Baja
+                db.Productos.Remove(producto);
                 await db.SaveChangesAsync();
                 await CargarProductos();
             }
         }
     }
-
-    private void CancelarEdicion()
-    {
-        productoModel = new();
-        editando = false;
-    }
 }
+
+<script>
+    // Funciones auxiliares simples para manejar modales de Bootstrap desde Blazor
+    window.bootstrapModalFunctions = {
+        show: function (modalId) {
+            var myModal = new bootstrap.Modal(document.getElementById(modalId));
+            myModal.show();
+        },
+        hide: function (modalId) {
+            var modalElement = document.getElementById(modalId);
+            var modalInstance = bootstrap.Modal.getInstance(modalElement);
+            if (modalInstance) {
+                modalInstance.hide();
+            }
+        }
+    };
+</script>
