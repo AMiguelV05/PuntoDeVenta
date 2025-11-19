@@ -2,7 +2,9 @@
 @rendermode InteractiveServer
 @using Microsoft.EntityFrameworkCore
 @using PuntoDeVenta.Data
+@using System.Threading.Tasks
 @inject IDbContextFactory<ApplicationDbContext> DbFactory
+@inject IJSRuntime JSRuntime
 
 
 <PageTitle>Reporte de Ventas</PageTitle>
@@ -69,65 +71,72 @@ else
     </table>
 }
 
-@if (ventaSeleccionada != null)
-{
-    <div class="modal fade show" tabindex="-1" style="display: block; background-color: rgba(0,0,0,0.5);">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Detalle de Venta #@ventaSeleccionada.VentaId</h5>
-                    <button type="button" class="btn-close" @onclick="CerrarDetalle"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <p class="mb-0"><strong>Cliente:</strong> @(ventaSeleccionada.Cliente?.Nombre ?? "Público General")</p>
-                        </div>
-                        <div class="col-md-6">
-                            <p class="mb-0 text-center"><strong>Vendedor:</strong> @(ventaSeleccionada.Empleado?.Nombre ?? "N/A")</p>
-                        </div>
-                    </div>
-                    <p><strong>Fecha:</strong> @ventaSeleccionada.FechaVenta.LocalDateTime.ToString("g")</p>
-                    @if (ventaSeleccionada.AplicarIVA.HasValue)
-                    {
-                        <p><strong>IVA Agregado:</strong> @(ventaSeleccionada.AplicarIVA.Value ? ((ventaSeleccionada.Total/1.16m)*0.16m).ToString("C") : "Libre de IVA")</p>
-                    }
-                    else
-                    {
-                        <p><strong>IVA Agregado:</strong> No especificado</p>
-                    }
-                    <table class="table table-striped table-sm">
-                        <thead>
-                            <tr>
-                                <th style="width: 30%;" class="text-center">Producto</th>
-                                <th style="width: 15%;" class="text-center">Cantidad</th>
-                                <th style="width: 15%;" class="text-center">Precio Unit.</th>
-                                <th style="width: 15%;" class="text-center">Subtotal</th>
-                                <th style="width: 15%;" class="text-center">Descuento</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var det in ventaSeleccionada.DetalleVentas)
-                            {
-                                <tr>
-                                    <td style="word-wrap: break-word">@det.Producto.Nombre</td>
-                                    <td class="text-center">@det.Cantidad</td>
-                                    <td class="text-center">@det.PrecioUnitario.ToString("C")</td>
-                                    <td class="text-center">@((det.Cantidad * det.PrecioUnitario).ToString("C"))</td>
-                                    <td class="text-center text-danger">-@det.Descuento.ToString("C")</td>
-                                </tr>
-                            }
-                        </tbody>
-                    </table>
-                </div>
-                <div class="modal-footer">
-                    <h4>Total: @ventaSeleccionada.Total.ToString("C")</h4>
-                    <button type="button" class="btn btn-secondary" @onclick="CerrarDetalle">Cerrar</button>
-                </div>
+<div class="modal fade" id="detalleVentaModal" tabindex="-1" ariaaria-labelledby="detalleVentaModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+        @if (ventaSeleccionada != null)
+        {
+            <div class="modal-header">
+                <h5 class="modal-title">Detalle de Venta #@ventaSeleccionada.VentaId</h5>
+                <button type="button" class="btn-close" @onclick="CerrarDetalle"></button>
             </div>
+            <div class="modal-body">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <p class="mb-0"><strong>Cliente:</strong> @(ventaSeleccionada.Cliente?.Nombre ?? "Público General")</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p class="mb-0 text-center"><strong>Vendedor:</strong> @(ventaSeleccionada.Empleado?.Nombre ?? "N/A")</p>
+                    </div>
+                </div>
+                <p><strong>Fecha:</strong> @ventaSeleccionada.FechaVenta.LocalDateTime.ToString("g")</p>
+                @if (ventaSeleccionada.AplicarIVA.HasValue)
+                {
+                    <p><strong>IVA Agregado:</strong> @(ventaSeleccionada.AplicarIVA.Value ? ((ventaSeleccionada.Total/1.16m)*0.16m).ToString("C") : "Libre de IVA")</p>
+                }
+                else
+                {
+                    <p><strong>IVA Agregado:</strong> No especificado</p>
+                }
+                <table class="table table-striped table-sm">
+                    <thead>
+                        <tr>
+                            <th style="width: 30%;" class="text-center">Producto</th>
+                            <th style="width: 15%;" class="text-center">Cantidad</th>
+                            <th style="width: 15%;" class="text-center">Precio Unit.</th>
+                            <th style="width: 15%;" class="text-center">Subtotal</th>
+                            <th style="width: 15%;" class="text-center">Descuento</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var det in ventaSeleccionada.DetalleVentas)
+                        {
+                            <tr>
+                                <td style="word-wrap: break-word">@det.Producto.Nombre</td>
+                                <td class="text-center">@det.Cantidad</td>
+                                <td class="text-center">@det.PrecioUnitario.ToString("C")</td>
+                                <td class="text-center">@((det.Cantidad * det.PrecioUnitario).ToString("C"))</td>
+                                <td class="text-center text-danger">-@det.Descuento.ToString("C")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            <div class="modal-footer">
+                <h4>Total: @ventaSeleccionada.Total.ToString("C")</h4>
+                <button type="button" class="btn btn-secondary" @onclick="CerrarDetalle">Cerrar</button>
+            </div>
+        }
+        else
+        {
+            <div class="modal-body text-center py-5">
+                <div class="spinner-border text-primary" role="status"></div>
+                 <p class="mt-2">Cargando detalles...</p>
+            </div>
+        }
         </div>
     </div>
-}
+</div>
 
 
 @code {
@@ -152,6 +161,9 @@ else
 
     private async Task VerDetalle(long ventaId)
     {
+        ventaSeleccionada = null;
+        await JSRuntime.InvokeVoidAsync("bootstrapModalFunctions.show", "detalleVentaModal");
+
         using var db = DbFactory.CreateDbContext();
         ventaSeleccionada = await db.Ventas
             .Include(v => v.Cliente)
@@ -162,8 +174,9 @@ else
             .FirstOrDefaultAsync(v => v.VentaId == ventaId);
     }
 
-    private void CerrarDetalle()
+    private async Task CerrarDetalle()
     {
+        await JSRuntime.InvokeVoidAsync("bootstrapModalFunctions.hide", "detalleVentaModal");
         ventaSeleccionada = null;
     }
 }

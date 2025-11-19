@@ -242,35 +242,6 @@
            _ = Notifier.SetMessage("No se encontró ningún producto con el código SKU proporcionado.", "warning");
         }
     }
-    /*private async Task FiltrarProductos(ChangeEventArgs e)
-    {
-        var todosLosProductosSeguro = todosLosProductos ?? new List<Producto>();
-        terminoBusqueda = e.Value?.ToString() ?? "";
-        if (string.IsNullOrWhiteSpace(terminoBusqueda))
-        {
-            productosFiltrados = todosLosProductosSeguro.ToList();
-        }
-        else
-        {
-            productosFiltrados = todosLosProductosSeguro
-                .Where(p => p.Nombre.Contains(terminoBusqueda, StringComparison.OrdinalIgnoreCase) ||
-                            (p.CodigoSku != null && p.CodigoSku.Contains(terminoBusqueda, StringComparison.OrdinalIgnoreCase)))
-                .ToList();
-        }
-
-        if (!string.IsNullOrEmpty(terminoBusqueda))
-        {
-            var matchExacto = todosLosProductosSeguro
-                .FirstOrDefault(p => p.CodigoSku != null && p.CodigoSku.Equals(terminoBusqueda, StringComparison.OrdinalIgnoreCase));
-            
-            if (matchExacto != null)
-            {
-                terminoBusqueda = "";
-                productosFiltrados = todosLosProductosSeguro.ToList();
-                _ = PrepararEdicion(matchExacto);
-            }
-        }
-    }*/
 
     private void LimpiarBusqueda()
     {
@@ -305,8 +276,8 @@
     private async Task CerrarModal()
     {
         productoModel = new();
-        editando = false;
         await JSRuntime.InvokeVoidAsync("bootstrapModalFunctions.hide", "productoModal");
+        editando = false;
     }
 
     private async Task GuardarProducto()
@@ -343,20 +314,3 @@
         }
     }
 }
-
-<script>
-    // Funciones auxiliares simples para manejar modales de Bootstrap desde Blazor
-    window.bootstrapModalFunctions = {
-        show: function (modalId) {
-            var myModal = new bootstrap.Modal(document.getElementById(modalId));
-            myModal.show();
-        },
-        hide: function (modalId) {
-            var modalElement = document.getElementById(modalId);
-            var modalInstance = bootstrap.Modal.getInstance(modalElement);
-            if (modalInstance) {
-                modalInstance.hide();
-            }
-        }
-    };
-</script>

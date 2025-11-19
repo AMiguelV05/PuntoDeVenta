@@ -18,48 +18,52 @@
 <body>
     <Routes />
     <script src="_framework/blazor.web.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        let componentInstance = null;
-        let paymentModal = null;
-
-        window.setupKeyboardShortcuts = (dotNetObjectReference) => {
-            componentInstance = dotNetObjectReference;
-            
             // Inicializar el modal de Bootstrap
-            const modalElement = document.getElementById('paymentModal');
-            if (modalElement) {
-                paymentModal = new bootstrap.Modal(modalElement);
-            }
-
-            document.addEventListener('keydown', (event) => {
-                // Capturar F12 para Cobrar
-                if (event.key === 'F12' && !event.defaultPrevented) {
-                    event.preventDefault(); // Evita que el navegador abra las herramientas de desarrollador
-                    if (componentInstance) {
-                        componentInstance.invokeMethodAsync('HandleF12Shortcut');
+            window.bootstrapModalFunctions = {
+            show: function (elementId) {
+                var el = document.getElementById(elementId);
+                if (el) {
+                    // getOrCreateInstance es más seguro: si ya existe, lo usa; si no, lo crea.
+                    var modal = bootstrap.Modal.getOrCreateInstance(el);
+                    modal.show();
+                }
+            },
+            hide: function (elementId) {
+                var el = document.getElementById(elementId);
+                if (el) {
+                    var modal = bootstrap.Modal.getInstance(el);
+                    if (modal) {
+                        modal.hide();
                     }
                 }
-                
-                // Capturar Escape (Esc) para Cancelar Venta
-                if (event.key === 'Escape' && !event.defaultPrevented) {
-                    // Lógica para LimpiarVenta o simplemente cerrar el modal si está abierto
-                }
-            });
-        };
-
-        window.showPaymentModal = () => {
-            if (paymentModal) {
-                paymentModal.show();
-            }
-        };
-
-        window.hidePaymentModal = () => {
-            if (paymentModal) {
-                paymentModal.hide();
             }
         };
     </script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        let componentInstance = null;
+
+        window.setupKeyboardShortcuts = (dotNetObjectReference) => {
+            componentInstance = dotNetObjectReference;
+        };
+
+        document.addEventListener('keydown', (event) => {
+            // F12: Cobrar
+            if (event.key === 'F12' && !event.defaultPrevented) {
+                event.preventDefault(); 
+                if (componentInstance) {
+                    componentInstance.invokeMethodAsync('HandleF12Shortcut');
+                }
+            }
+            
+            // Escape: Cancelar/Salir
+            if (event.key === 'Escape' && !event.defaultPrevented) {
+                // Aquí puedes agregar lógica futura si lo necesitas
+            }
+        });
+    </script>
 </body>
 
 </html>

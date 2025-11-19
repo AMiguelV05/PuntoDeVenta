@@ -341,7 +341,7 @@
         montoRecibido = total; // Valor por defecto
         tipoPago = "Efectivo";
 
-        await JSRuntime.InvokeVoidAsync("showPaymentModal");
+        await JSRuntime.InvokeVoidAsync("bootstrapModalFunctions.show", "paymentModal");
     }
 
     private Task FinalizarVenta()
@@ -350,7 +350,7 @@
     }
     private async Task ConfirmarPago()
     {
-        await JSRuntime.InvokeVoidAsync("hidePaymentModal");
+        await JSRuntime.InvokeVoidAsync("bootstrapModalFunctions.hide", "paymentModal");
 
         using var db = DbFactory.CreateDbContext();
         using var transaccion = await db.Database.BeginTransactionAsync();
