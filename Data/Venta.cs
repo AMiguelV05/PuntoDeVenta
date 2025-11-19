@@ -27,6 +27,9 @@ public class Venta
     [Column("empleado_id")]
     public long EmpleadoId { get; set; }
 
+    [Column("aplicar_iva")]
+    public bool? AplicarIVA { get; set; }
+
     // FKs
 
     // Una Venta pertenece a un Cliente

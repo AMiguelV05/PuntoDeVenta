@@ -26,6 +26,9 @@ public class DetalleVenta
     [Column("producto_id")]
     public long ProductoId { get; set; }
 
+    [Column("descuento")]
+    public decimal Descuento {get; set;}
+
     // FKs
 
     // Este detalle pertenece a una Venta

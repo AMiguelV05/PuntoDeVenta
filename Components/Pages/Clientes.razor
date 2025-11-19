@@ -44,30 +44,32 @@
 }
 else
 {
-    <table class="table table-striped">
-        <thead>
-            <tr>
-                <th>Nombre</th>
-                <th>Teléfono</th>
-                <th>Email</th>
-                <th>Acciones</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var cli in clientes)
-            {
+    <div class="table-responsive">
+        <table class="table table-striped">
+            <thead>
                 <tr>
-                    <td>@cli.Nombre</td>
-                    <td>@cli.Telefono</td>
-                    <td>@cli.Correo</td>
-                    <td>
-                        <button class="btn btn-sm btn-warning" @onclick="() => PrepararEdicion(cli)">Editar</button>
-                        <button class="btn btn-sm btn-danger" @onclick="() => EliminarCliente(cli.ClienteId)">Eliminar</button>
-                    </td>
+                    <th>Nombre</th>
+                    <th>Teléfono</th>
+                    <th>Email</th>
+                    <th>Acciones</th>
                 </tr>
-            }
-        </tbody>
-    </table>
+            </thead>
+            <tbody>
+                @foreach (var cli in clientes)
+                {
+                    <tr>
+                        <td>@cli.Nombre</td>
+                        <td>@cli.Telefono</td>
+                        <td>@cli.Correo</td>
+                        <td>
+                            <button class="btn btn-sm btn-warning" @onclick="() => PrepararEdicion(cli)">Editar</button>
+                            <button class="btn btn-sm btn-danger" @onclick="() => EliminarCliente(cli.ClienteId)">Eliminar</button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
 }
 
 @code {
