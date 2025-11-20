@@ -95,13 +95,13 @@
                                             <span class="badge bg-info text-dark rounded-pill">@prod.StockActual</span>
                                         }
                                     </td>
-                                    <td class="text-end text-success fw-bold">@prod.PrecioVenta.ToString("C")</td>
+                                    <td class="text-center text-success fw-bold">@prod.PrecioVenta.ToString("C")</td>
                                     <td class="text-center">
                                         <div class="btn-group shadow-sm" role="group">
                                             <button class="btn btn-sm btn-outline-primary" @onclick="() => PrepararEdicion(prod)" title="Editar">
                                                 <i class="bi bi-pencil-square"></i>
                                             </button>
-                                            <button class="btn btn-sm btn-outline-danger" @onclick="() => EliminarProducto(prod.ProductoId)" title="Eliminar">
+                                            <button class="btn btn-sm btn-outline-danger" @onclick="() => SolicitarEliminacion(prod)" title="Eliminar">
                                                 <i class="bi bi-trash"></i>
                                             </button>
                                         </div>
@@ -148,8 +148,20 @@
                         <InputText @bind-Value="productoModel.Nombre" class="form-control" placeholder="Ej. Coca Cola 600ml" />
                         <ValidationMessage For="@(() => productoModel.Nombre)" class="text-danger small" />
                     </div>
-
+                    <div class="mb-3">
+                        <label class="form-label small">Descripción (Opcional):</label>
+                        <InputTextArea @bind-Value="productoModel.Descripcion" class="form-control form-control-sm" rows="3" />
+                        <ValidationMessage For="@(() => productoModel.Descripcion)" class="text-danger small" />
+                    </div>
                     <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold text-secondary">Precio Compra:</label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <InputNumber TValue="decimal?" @bind-Value="productoModel.PrecioCompra" class="form-control" />
+                            </div>
+                            <ValidationMessage For="@(() => productoModel.PrecioCompra)" class="text-danger small" />
+                        </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label fw-bold text-secondary">Precio Venta:</label>
                             <div class="input-group">
@@ -158,11 +170,32 @@
                             </div>
                             <ValidationMessage For="@(() => productoModel.PrecioVenta)" class="text-danger small" />
                         </div>
+                    </div>
+                    <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="form-label fw-bold text-secondary">Stock Actual:</label>
                             <InputNumber TValue="decimal" @bind-Value="productoModel.StockActual" class="form-control" />
                             <ValidationMessage For="@(() => productoModel.StockActual)" class="text-danger small" />
                         </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-secondary">Categoría:</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-tag"></i></span>
+                            
+                            <InputSelect @bind-Value="productoModel.CategoriaId" class="form-select">
+                                <option value="">-- Seleccione una Categoría --</option>
+                                @foreach (var cat in listaCategorias)
+                                {
+                                    <option value="@cat.CategoriaId">@cat.Nombre</option>
+                                }
+                            </InputSelect>
+
+                            <button type="button" class="btn btn-outline-primary" @onclick="AbrirModalCategoria" title="Crear nueva categoría">
+                                <i class="bi bi-plus-lg"></i>
+                            </button>
+                        </div>
+                        <ValidationMessage For="@(() => productoModel.CategoriaId)" class="text-danger small" />
                     </div>
                 </div>
                 
@@ -176,17 +209,85 @@
         </div>
     </div>
 </div>
+<div class="modal fade" id="categoriaModal" tabindex="-1" style="z-index: 1060;"> 
+    <div class="modal-dialog modal-sm modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h6 class="modal-title">Nueva Categoría</h6>
+                <button type="button" class="btn-close btn-close-white" @onclick="CerrarModalCategoria"></button>
+            </div>
+            <div class="modal-body">
+                <EditForm Model="nuevaCategoriaModel" OnValidSubmit="GuardarCategoriaRapida">
+                    <DataAnnotationsValidator />
+                    <div class="mb-3">
+                        <label class="form-label small">Nombre:</label>
+                        <InputText @bind-Value="nuevaCategoriaModel.Nombre" class="form-control form-control-sm" placeholder="Ej. Bebidas" />
+                        <ValidationMessage For="@(() => nuevaCategoriaModel.Nombre)" class="text-danger small" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small">Descripción (Opcional):</label>
+                        <InputTextArea @bind-Value="nuevaCategoriaModel.Descripcion" class="form-control form-control-sm" rows="3" />
+                        <ValidationMessage For="@(() => nuevaCategoriaModel.Descripcion)" class="text-danger small" />
+                    </div>
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-sm btn-primary">Guardar</button>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="modal fade" id="confirmarEliminacionModal" tabindex="-1" aria-hidden="true" style="z-index: 1070;">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>Confirmar Eliminación
+                </h5>
+                <button type="button" class="btn-close btn-close-white" @onclick="CerrarModalEliminacion" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center p-4">
+                <div class="mb-3 text-danger">
+                    <i class="bi bi-trash3 display-1"></i>
+                </div>
+                <h5 class="mb-3">¿Estás seguro?</h5>
+                <p class="text-muted mb-0">
+                    Estás a punto de eliminar el producto:
+                </p>
+                @if (productoAEliminar != null)
+                {
+                    <p class="fw-bold fs-5 text-dark mt-2">@productoAEliminar.Nombre</p>
+                    <p class="small text-secondary">SKU: @(productoAEliminar.CodigoSku ?? "N/A")</p>
+                }
+                <p class="text-muted small mt-3">
+                    Esta acción es irreversible y podría afectar el historial de ventas si existen registros vinculados.
+                </p>
+            </div>
+            <div class="modal-footer bg-light justify-content-center">
+                <button type="button" class="btn btn-secondary px-4" @onclick="CerrarModalEliminacion">
+                    <i class="bi bi-x-lg me-2"></i>Cancelar
+                </button>
+                <button type="button" class="btn btn-danger px-4" @onclick="ConfirmarEliminacion">
+                    <i class="bi bi-trash-fill me-2"></i>Sí, Eliminar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 
 @code {
     private string terminoBusqueda = "";
     private List<Producto>? todosLosProductos;
     private List<Producto> productosFiltrados = new();
     private Producto productoModel = new();
+    private Producto? productoAEliminar;
     private bool editando = false;
+    private List<Categoria> listaCategorias = new();
+    private Categoria nuevaCategoriaModel = new();
 
     protected override async Task OnInitializedAsync()
     {
-        await CargarProductos();
+        await Task.WhenAll(CargarProductos(), CargarCategorias());
     }
 
     private async Task CargarProductos()
@@ -275,8 +376,9 @@
 
     private async Task CerrarModal()
     {
-        productoModel = new();
         await JSRuntime.InvokeVoidAsync("bootstrapModalFunctions.hide", "productoModal");
+        await Task.Delay(300);
+        productoModel = new();
         editando = false;
     }
 
@@ -297,20 +399,77 @@
         await CargarProductos();
         await CerrarModal();
     }
-
-    private async Task EliminarProducto(long id)
+    private async Task CargarCategorias()
     {
-        var confirmado = await JSRuntime.InvokeAsync<bool>("confirm", $"¿Estás seguro que quieres eliminar este producto? Esta acción no se puede deshacer.");
-        if (confirmado)
+        using var db = DbFactory.CreateDbContext();
+        listaCategorias = await db.Categorias.AsNoTracking().OrderBy(c => c.Nombre).ToListAsync();
+    }
+
+    private async Task AbrirModalCategoria()
+    {
+        nuevaCategoriaModel = new();
+        await JSRuntime.InvokeVoidAsync("bootstrapModalFunctions.show", "categoriaModal");
+    }
+
+    private async Task CerrarModalCategoria()
+    {
+        await JSRuntime.InvokeVoidAsync("bootstrapModalFunctions.hide", "categoriaModal");
+    }
+ 
+    private async Task GuardarCategoriaRapida()
+    {
+        if (string.IsNullOrWhiteSpace(nuevaCategoriaModel.Nombre)) return;
+
+        using var db = DbFactory.CreateDbContext();
+        db.Categorias.Add(nuevaCategoriaModel);
+        await db.SaveChangesAsync();
+
+        // Recargar la lista para que aparezca en el dropdown
+        await CargarCategorias();
+        
+        // Seleccionar automáticamente la categoría recién creada en el producto
+        productoModel.CategoriaId = nuevaCategoriaModel.CategoriaId;
+
+        await CerrarModalCategoria();
+        
+        // Notificación opcional
+        _ = Notifier.SetMessage("Categoría creada exitosamente", "success");
+    }
+
+    private async Task SolicitarEliminacion(Producto producto)
+    {
+        productoAEliminar = producto;
+        await JSRuntime.InvokeVoidAsync("bootstrapModalFunctions.show", "confirmarEliminacionModal");
+    }
+    private async Task ConfirmarEliminacion()
+    {
+        if (productoAEliminar == null) return;
+
+        try
         {
             using var db = DbFactory.CreateDbContext();
-            var producto = await db.Productos.FindAsync(id);
+            var producto = await db.Productos.FindAsync(productoAEliminar.ProductoId);
             if (producto != null)
             {
                 db.Productos.Remove(producto);
                 await db.SaveChangesAsync();
+                _ = Notifier.SetMessage($"El producto '{productoAEliminar.Nombre}' ha sido eliminado exitosamente.", "success");
                 await CargarProductos();
             }
         }
+        catch (Exception ex)
+        {
+            _ = Notifier.SetMessage("Error al eliminar el producto: " + ex.Message, "danger", 5000);
+        }
+        finally
+        {
+            productoAEliminar = null;
+            await CerrarModalEliminacion();
+        }
+    }
+    private async Task CerrarModalEliminacion()
+    {
+        await JSRuntime.InvokeVoidAsync("bootstrapModalFunctions.hide", "confirmarEliminacionModal");
+        productoAEliminar = null;
     }
 }
