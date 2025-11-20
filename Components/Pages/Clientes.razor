@@ -4,78 +4,246 @@
 @using PuntoDeVenta.Data
 @inject IDbContextFactory<ApplicationDbContext> DbFactory
 @inject IJSRuntime JSRuntime
+@inject NotificationService Notifier
 
 <PageTitle>Gestión de Clientes</PageTitle>
 
-<h3>Gestión de Clientes</h3>
+<div class="container-fluid pt-3">
+    
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h3 class="text-primary m-0">
+            <i class="bi bi-people-fill me-2"></i>Directorio de Clientes
+        </h3>
+        <button class="btn btn-success shadow-sm" @onclick="IniciarNuevoCliente">
+            <i class="bi bi-person-plus-fill me-2"></i>Nuevo Cliente
+        </button>
+    </div>
 
-<EditForm Model="clienteModel" OnValidSubmit="GuardarCliente" FormName="gestionarClientes">
-    <DataAnnotationsValidator />
-    <h4>@(editando ? "Editar Cliente" : "Nuevo Cliente")</h4>
-    <div class="card mb-4">
-        <div class="card-body">
-            <div class="mb-3">
-                <label>Nombre:</label>
-                <InputText @bind-Value="clienteModel.Nombre" class="form-control" />
-                <ValidationMessage For="@(() => clienteModel.Nombre)" />
-            </div>
-            <div class="row">
-                <div class="col-md-6 mb-3">
-                    <label>Teléfono:</label>
-                    <InputText @bind-Value="clienteModel.Telefono" class="form-control" />
+
+    <div class="card shadow-lg border-0">
+        <div class="card-header bg-white py-3">
+            <div class="row align-items-center">
+                <div class="col">
+                    <div class="input-group">
+                        <span class="input-group-text bg-light text-primary border-end-0">
+                            <i class="bi bi-search"></i>
+                        </span>
+                        <InputText
+                                @bind-Value="terminoBusqueda" 
+                                class="form-control border-control-lg" 
+                                placeholder="Buscar por nombre o teléfono..." 
+                                @oninput="FiltrarClientes" />
+                        <button class="btn btn-outline-secondary" type="button" @onclick="() => LimpiarBusqueda()">
+                            <i class="bi bi-x-lg"></i>
+                        </button>
+                    </div>
                 </div>
-                <div class="col-md-6 mb-3">
-                    <label>Email:</label>
-                    <InputText @bind-Value="clienteModel.Correo" class="form-control" />
-                </div>
             </div>
-            <button type="submit" class="btn btn-primary">@(editando ? "Actualizar" : "Crear")</button>
-            @if (editando)
+        </div>
+
+        <div class="card-body p-0">
+            @if (clientesFiltrados == null)
             {
-                <button type="button" class="btn btn-secondary" @onclick="CancelarEdicion">Cancelar</button>
+                <div class="p-4 text-center text-muted">
+                    <div class="spinner-border text-primary mb-2" role="status"></div>
+                    <p>Cargando cartera de clientes...</p>
+                </div>
+            }
+            else if (!clientesFiltrados.Any())
+            {
+                <div class="p-4 text-center text-muted">
+                    <i class="bi bi-search display-4 mb-3"></i>
+                    <p class="fs-5">No se encontraron clientes con '<strong>@terminoBusqueda</strong>'.</p>
+                </div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover table-striped align-middle mb-0">
+                        <thead class="table-dark">
+                            <tr>
+                                <th class="ps-3"><i class="bi bi-person me-2"></i>Nombre</th>
+                                <th><i class="bi bi-telephone me-2"></i>Teléfono</th>
+                                <th><i class="bi bi-envelope me-2"></i>Email</th>
+                                <th><i class="bi bi-file-person"></i>RFC</th>
+                                <th><i class="bi bi-geo-alt"></i> Dirección</th>
+                                <th class="text-center" style="width: 150px">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var cli in clientesFiltrados)
+                            {
+                                <tr>
+                                    <td class="ps-3 fw-bold text-secondary">@cli.Nombre</td>
+                                    <td>
+                                        @if(!string.IsNullOrEmpty(cli.Telefono))
+                                        {
+                                            <span class="badge bg-light text-dark border">
+                                                <i class="bi bi-phone"></i> @cli.Telefono
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted small">--</span>
+                                        }
+                                    </td>
+                                    <td>@cli.Correo</td>
+                                    <td class="text-start">@cli.Rfc</td>
+                                    <td>
+                                    @if(!string.IsNullOrEmpty(cli.Direccion))
+                                        {
+                                            @cli.Direccion
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted small">--</span>
+                                        }
+                                    </td>
+                                    <td class="text-center pe-3">
+                                        <div class="btn-group shadow-sm">
+                                            <button class="btn btn-sm btn-outline-primary" 
+                                                    @onclick="() => PrepararEdicion(cli)" 
+                                                    title="Editar">
+                                                <i class="bi bi-pencil-square"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-danger" 
+                                                    @onclick="() => SolicitarEliminacionCliente(cli)" 
+                                                    title="Eliminar">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
             }
         </div>
+        <div class="card-footer bg-light text-muted small">
+             Mostrando @((clientesFiltrados != null) ? clientesFiltrados.Count : 0) de @((todosLosClientes != null) ? todosLosClientes.Count : 0) clientes.
+        </div>
     </div>
-</EditForm>
+</div>
 
-@if (clientes == null)
-{
-    <p><em>Cargando...</em></p>
-}
-else
-{
-    <div class="table-responsive">
-        <table class="table table-striped">
-            <thead>
-                <tr>
-                    <th>Nombre</th>
-                    <th>Teléfono</th>
-                    <th>Email</th>
-                    <th>Acciones</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var cli in clientes)
-                {
-                    <tr>
-                        <td>@cli.Nombre</td>
-                        <td>@cli.Telefono</td>
-                        <td>@cli.Correo</td>
-                        <td>
-                            <button class="btn btn-sm btn-warning" @onclick="() => PrepararEdicion(cli)">Editar</button>
-                            <button class="btn btn-sm btn-danger" @onclick="() => EliminarCliente(cli.ClienteId)">Eliminar</button>
-                        </td>
-                    </tr>
-                }
-            </tbody>
-        </table>
+
+<div class="modal fade" id="clienteModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header @(editando ? "bg-warning" : "bg-success") text-white">
+                <h5 class="modal-title">
+                    <i class="bi @(editando ? "bi-pencil-square" : "bi-person-plus-fill") me-2"></i>
+                    @(editando ? "Editar Cliente" : "Nuevo Cliente")
+                </h5>
+                <button type="button" class="btn-close btn-close-white" @onclick="CerrarModal"></button>
+            </div>
+            
+            <EditForm Model="clienteModel" OnValidSubmit="GuardarCliente" FormName="gestionarClientes">
+                <DataAnnotationsValidator />
+                
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-secondary">Nombre Completo:</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-person"></i></span>
+                            <InputText @bind-Value="clienteModel.Nombre" class="form-control" placeholder="Ej. Juan Pérez" />
+                        </div>
+                        <ValidationMessage For="@(() => clienteModel.Nombre)" class="text-danger small" />
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold text-secondary">Teléfono:</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="bi bi-telephone"></i></span>
+                                <InputText @bind-Value="clienteModel.Telefono" class="form-control" placeholder="Ej. 55 1234 5678" />
+                            </div>
+                            <ValidationMessage For="@(() => clienteModel.Telefono)" class="text-danger small" />
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold text-secondary">Correo Electrónico:</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="bi bi-envelope"></i></span>
+                                <InputText @bind-Value="clienteModel.Correo" class="form-control" placeholder="email@ejemplo.com" />
+                            </div>
+                            <ValidationMessage For="@(() => clienteModel.Correo)" class="text-danger small" />
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold text-secondary">RFC:</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="bi bi-file-person"></i></span>
+                                <InputText @bind-Value="clienteModel.Rfc" class="form-control" placeholder="Ej. PEJU800101XXX" maxlength="13" />
+                            </div>
+                            <ValidationMessage For="@(() => clienteModel.Rfc)" class="text-danger small" />
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold text-secondary">Dirección:</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="bi bi-geo-alt"></i></span>
+                                <InputText @bind-Value="clienteModel.Direccion" class="form-control" placeholder="Ej. Calle Falsa 123, Ciudad" />
+                            </div>
+                            <ValidationMessage For="@(() => clienteModel.Direccion)" class="text-danger small" />
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary" @onclick="CerrarModal">Cancelar</button>
+                    <button type="submit" class="btn @(editando ? "btn-warning" : "btn-success") px-4">
+                        <i class="bi @(editando ? "bi-check-lg" : "bi-save") me-2"></i>
+                        @(editando ? "Actualizar Datos" : "Guardar Cliente")
+                    </button>
+                </div>
+            </EditForm>
+        </div>
     </div>
-}
+</div>
+<div class="modal fade" id="confirmarEliminacionModal" tabindex="-1" aria-hidden="true" style="z-index: 1070;">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>Confirmar Eliminación
+                </h5>
+                <button type="button" class="btn-close btn-close-white" @onclick="CerrarModalEliminacion" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center p-4">
+                <div class="mb-3 text-danger">
+                    <i class="bi bi-trash3 display-1"></i>
+                </div>
+                <h5 class="mb-3">¿Estás seguro?</h5>
+                <p class="text-muted mb-0">
+                    Estás a punto de eliminar al cliente:
+                </p>
+                @if (clienteAEliminar != null)
+                {
+                    <p class="fw-bold fs-5 text-dark mt-2">@clienteAEliminar.Nombre</p>
+                }
+                <p class="text-muted small mt-3">
+                    Esta acción es irreversible y podría afectar el historial de ventas si existen registros vinculados.
+                </p>
+            </div>
+            <div class="modal-footer bg-light justify-content-center">
+                <button type="button" class="btn btn-secondary px-4" @onclick="CerrarModalEliminacion">
+                    <i class="bi bi-x-lg me-2"></i>Cancelar
+                </button>
+                <button type="button" class="btn btn-danger px-4" @onclick="ConfirmarEliminacion">
+                    <i class="bi bi-trash-fill me-2"></i>Sí, Eliminar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 
 @code {
-    private List<Cliente>? clientes;
+    private List<Cliente>? todosLosClientes;
+    private List<Cliente>? clientesFiltrados;
     private Cliente clienteModel = new();
+    private Cliente? clienteAEliminar;
     private bool editando = false;
+    private string terminoBusqueda = "";
 
     protected override async Task OnInitializedAsync()
     {
@@ -85,12 +253,43 @@ else
     private async Task CargarClientes()
     {
         using var db = DbFactory.CreateDbContext();
-        clientes = await db.Clientes.AsNoTracking().OrderBy(c => c.Nombre).ToListAsync();
+        todosLosClientes = await db.Clientes.AsNoTracking().OrderBy(c => c.Nombre).ToListAsync();
+        clientesFiltrados = todosLosClientes.ToList();
     }
 
-    private void PrepararEdicion(Cliente clienteAEditar)
+    private void FiltrarClientes(ChangeEventArgs e)
     {
-        // Asumiendo campos del modelo Cliente
+        terminoBusqueda = e.Value?.ToString() ?? "";
+        var todosLosClientesSeguro = todosLosClientes ?? new List<Cliente>();
+
+        if (string.IsNullOrWhiteSpace(terminoBusqueda))
+        {
+            clientesFiltrados = todosLosClientesSeguro.ToList();
+        }
+        else
+        {
+            clientesFiltrados = todosLosClientesSeguro
+                .Where(c => c.Nombre.Contains(terminoBusqueda, StringComparison.OrdinalIgnoreCase) || 
+                            (c.Telefono != null && c.Telefono.Contains(terminoBusqueda, StringComparison.OrdinalIgnoreCase)))
+                .ToList();
+        }
+    }
+
+    private void LimpiarBusqueda()
+    {
+        terminoBusqueda = "";
+        clientesFiltrados = todosLosClientes?.ToList() ?? new List<Cliente>();
+    }
+
+    private async Task IniciarNuevoCliente()
+    {
+        clienteModel = new();
+        editando = false;
+        await JSRuntime.InvokeVoidAsync("bootstrapModalFunctions.show", "clienteModal");
+    }
+
+    private async Task PrepararEdicion(Cliente clienteAEditar)
+    {
         clienteModel = new Cliente
         {
             ClienteId = clienteAEditar.ClienteId,
@@ -99,43 +298,78 @@ else
             Correo = clienteAEditar.Correo
         };
         editando = true;
+        await JSRuntime.InvokeVoidAsync("bootstrapModalFunctions.show", "clienteModal");
+    }
+
+    private async Task CerrarModal()
+    {
+        await JSRuntime.InvokeVoidAsync("bootstrapModalFunctions.hide", "clienteModal");
+        await Task.Delay(300);
+        clienteModel = new();
+        editando = false;
     }
 
     private async Task GuardarCliente()
     {
-        using var db = DbFactory.CreateDbContext();
-        if (editando)
-        {
-            db.Clientes.Update(clienteModel);
-        }
-        else
-        {
-            await db.Clientes.AddAsync(clienteModel);
-        }
-        await db.SaveChangesAsync();
-        await CargarClientes();
-        CancelarEdicion();
-    }
-
-    private async Task EliminarCliente(long id)
-    {
-        var confirmado = await JSRuntime.InvokeAsync<bool>("confirm", "¿Estás seguro que quieres eliminar este cliente?");
-        if (confirmado)
+        try
         {
             using var db = DbFactory.CreateDbContext();
-            var cliente = await db.Clientes.FindAsync(id);
+            if (editando)
+            {
+                db.Clientes.Update(clienteModel);
+            }
+            else
+            {
+                await db.Clientes.AddAsync(clienteModel);
+            }
+            await db.SaveChangesAsync();
+            await CargarClientes();
+            await CerrarModal();
+
+            _ = Notifier.SetMessage(editando ? $"Cliente {clienteModel.Nombre} actualizado exitosamente." : $"Nuevo cliente {clienteModel.Nombre} agregado exitosamente.", "success", 3000);
+        }
+        catch (Exception ex)
+        {
+            _ = Notifier.SetMessage($"Error al guardar el cliente: {ex.Message}", "error", 5000);
+        }
+    }
+
+    private async Task SolicitarEliminacionCliente(Cliente cliente)
+    {
+        clienteAEliminar = cliente;
+        await JSRuntime.InvokeVoidAsync("bootstrapModalFunctions.show", "confirmarEliminacionModal");
+    }
+
+    private async Task ConfirmarEliminacion()
+    {
+        if (clienteAEliminar == null) return;
+
+        try
+        {
+            using var db = DbFactory.CreateDbContext();
+            var cliente = await db.Clientes.FindAsync(clienteAEliminar.ClienteId);
             if (cliente != null)
             {
                 db.Clientes.Remove(cliente);
                 await db.SaveChangesAsync();
+                _ = Notifier.SetMessage($"El cliente '{clienteAEliminar.Nombre}' ha sido eliminado exitosamente.", "success");
                 await CargarClientes();
             }
         }
+        catch (Exception ex)
+        {
+            _ = Notifier.SetMessage("Error al eliminar el cliente: " + ex.Message, "danger", 5000);
+        }
+        finally
+        {
+            await CerrarModalEliminacion();
+            clienteAEliminar = null;
+        }
     }
 
-    private void CancelarEdicion()
+    private async Task CerrarModalEliminacion()
     {
-        clienteModel = new();
-        editando = false;
+        await JSRuntime.InvokeVoidAsync("bootstrapModalFunctions.hide", "confirmarEliminacionModal");
+        clienteAEliminar = null;
     }
 }

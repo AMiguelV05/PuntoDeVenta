@@ -15,6 +15,7 @@ public class Cliente
     public string Nombre { get; set; }
 
     [Required]
+    [StringLength(13)]
     [Column("rfc")]
     public string Rfc { get; set; }
 
