@@ -111,12 +111,41 @@
                 </div>
                 
                 <div class="card-footer bg-light py-3">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div class="text-muted small">
-                            Mostrando @ventas.Count registros encontrados.
+                    <div class="row align-items-center">
+                        
+                        <div class="col-md-4 text-muted small mb-2 mb-md-0">
+                            Mostrando @ventas.Count de @totalRegistros ventas.
                         </div>
-                        <div class="fs-5 fw-bold text-primary">
-                            Total Periodo: <span class="text-success">@ventas.Sum(v => v.Total).ToString("C")</span>
+
+                        <div class="col-md-4 d-flex justify-content-center mb-2 mb-md-0">
+                            <nav aria-label="Navegación de ventas">
+                                <ul class="pagination pagination-sm mb-0 shadow-sm">
+                                    <li class="page-item @(paginaActual == 1 ? "disabled" : "")">
+                                        <button class="page-link" @onclick="() => CambiarPagina(paginaActual - 1)" aria-label="Anterior">
+                                            <span aria-hidden="true">&laquo;</span>
+                                        </button>
+                                    </li>
+                                    
+                                    <li class="page-item disabled">
+                                        <span class="page-link text-dark bg-white border-top border-bottom">
+                                            Pág @paginaActual / @(totalPaginas == 0 ? 1 : totalPaginas)
+                                        </span>
+                                    </li>
+
+                                    <li class="page-item @(paginaActual == totalPaginas || totalPaginas == 0 ? "disabled" : "")">
+                                        <button class="page-link" @onclick="() => CambiarPagina(paginaActual + 1)" aria-label="Siguiente">
+                                            <span aria-hidden="true">&raquo;</span>
+                                        </button>
+                                    </li>
+                                </ul>
+                            </nav>
+                        </div>
+
+                        <div class="col-md-4 text-md-end">
+                            <span class="fs-6 fw-bold text-primary">
+                                Total Periodo: 
+                                <span class="text-success">@totalDineroPeriodo.ToString("C")</span>
+                            </span>
                         </div>
                     </div>
                 </div>
@@ -285,6 +314,13 @@
     private DateTime fechaInicio = DateTime.Today.AddDays(-7);
     private DateTime fechaFin = DateTime.Today;
 
+    // Paginación
+    private int paginaActual = 1;
+    private int elementosPorPagina = 20;
+    private int totalPaginas = 0;
+    private int totalRegistros = 0;
+    private decimal totalDineroPeriodo = 0;
+
     protected override async Task OnInitializedAsync()
     {
         if (AuthService.EmpleadoActual == null)
@@ -302,14 +338,52 @@
 
     private async Task CargarReporte()
     {
+        paginaActual = 1;
+        await CargarDatosPaginados();
+    }
+    private async Task CambiarPagina(int nuevaPagina)
+    {
+        if (nuevaPagina < 1 || nuevaPagina > totalPaginas) return;
+
+        paginaActual = nuevaPagina;
+        await CargarDatosPaginados();
+    }
+    private async Task CargarDatosPaginados()
+    {
         var fechaInicioUtc = fechaInicio.Date.ToUniversalTime();
         var fechaFinUtc = fechaFin.Date.AddDays(1).ToUniversalTime();
 
         using var db = DbFactory.CreateDbContext();
-        ventas = await db.Ventas
+
+        var queryBase = db.Ventas
             .Include(v => v.Cliente)
-            .Where(v => v.FechaVenta >= fechaInicioUtc && v.FechaVenta <= fechaFinUtc)
+            .Where(v => v.FechaVenta >= fechaInicioUtc && v.FechaVenta <= fechaFinUtc);
+
+
+        totalRegistros = await queryBase.CountAsync();
+
+        if (totalRegistros > 0)
+        {
+            totalDineroPeriodo = await queryBase.SumAsync(v => v.Total);
+        }
+        else
+        {
+            totalDineroPeriodo = 0;
+        }
+
+        if (totalRegistros > 0 && elementosPorPagina > 0)
+        {
+             totalPaginas = (int)Math.Ceiling(totalRegistros / (double)elementosPorPagina);
+        }
+        else 
+        {
+             totalPaginas = 0;
+        }
+
+        ventas = await queryBase
             .OrderByDescending(v => v.FechaVenta)
+            .Skip((paginaActual - 1) * elementosPorPagina) // Saltar los anteriores
+            .Take(elementosPorPagina) // Tomar solo el bloque actual
             .AsNoTracking()
             .ToListAsync();
     }

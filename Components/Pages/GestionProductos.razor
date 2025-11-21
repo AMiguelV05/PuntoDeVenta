@@ -46,7 +46,7 @@
             </div>
         </div>
         <div class="card-body p-0">
-            @if (todosLosProductos == null)
+            @if (productosFiltrados == null)
             {
                 <div class="p-4 text-center text-muted">
                     <div class="spinner-border text-primary mb-2" role="status"></div>
@@ -113,8 +113,36 @@
                         </tbody>
                     </table>
                 </div>
-                <div class="card-footer bg-light text-muted small">
-                    Mostrando @productosFiltrados.Count de @todosLosProductos.Count productos registrados.
+                <div class="card-footer bg-light py-3">
+                    <div class="row align-items-center">
+                        <div class="col-md-4 text-muted small mb-2 mb-md-0">
+                            Mostrando @productosFiltrados.Count de @totalRegistros productos.
+                        </div>
+                        
+                        <div class="col-md-8 d-flex justify-content-md-end justify-content-center">
+                            <nav aria-label="Navegación de inventario">
+                                <ul class="pagination pagination-sm mb-0 shadow-sm">
+                                    <li class="page-item @(paginaActual == 1 ? "disabled" : "")">
+                                        <button class="page-link" @onclick="() => CambiarPagina(paginaActual - 1)">
+                                            <span aria-hidden="true">&laquo;</span>
+                                        </button>
+                                    </li>
+                                    
+                                    <li class="page-item disabled">
+                                        <span class="page-link text-dark bg-white border-top border-bottom">
+                                            Pág @paginaActual / @(totalPaginas == 0 ? 1 : totalPaginas)
+                                        </span>
+                                    </li>
+
+                                    <li class="page-item @(paginaActual == totalPaginas || totalPaginas == 0 ? "disabled" : "")">
+                                        <button class="page-link" @onclick="() => CambiarPagina(paginaActual + 1)">
+                                            <span aria-hidden="true">&raquo;</span>
+                                        </button>
+                                    </li>
+                                </ul>
+                            </nav>
+                        </div>
+                    </div>
                 </div>
             }
         </div>
@@ -279,13 +307,18 @@
 
 @code {
     private string terminoBusqueda = "";
-    private List<Producto>? todosLosProductos;
     private List<Producto> productosFiltrados = new();
     private Producto productoModel = new();
     private Producto? productoAEliminar;
     private bool editando = false;
     private List<Categoria> listaCategorias = new();
     private Categoria nuevaCategoriaModel = new();
+
+    // Paginación
+    private int paginaActual = 1;
+    private int elementosPorPagina = 20;
+    private int totalPaginas = 0;
+    private int totalRegistros = 0;
 
     protected override async Task OnInitializedAsync()
     {
@@ -296,72 +329,93 @@
         }
         if (AuthService.EmpleadoActual.Puesto == "en espera")
         {
-            _ = Notifier.SetMessage("Acceso no autorizado. Por favor, espera a que un Admin te conceda el acceso.", "warning", 3000);
+            _ = Notifier.SetMessage("Acceso no autorizado.", "warning");
             NavManager.NavigateTo("/");
             return;
         }
+        
         await Task.WhenAll(CargarProductos(), CargarCategorias());
     }
 
     private async Task CargarProductos()
     {
         using var db = DbFactory.CreateDbContext();
-        todosLosProductos = await db.Productos.AsNoTracking().OrderBy(p => p.Nombre).ToListAsync();
-        productosFiltrados = todosLosProductos.ToList();
+        
+        var query = db.Productos.AsNoTracking().AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(terminoBusqueda))
+        {
+            var termino = terminoBusqueda.ToLower();
+            query = query.Where(p => p.Nombre.ToLower().Contains(termino) || 
+                                    (p.CodigoSku != null && p.CodigoSku.ToLower().Contains(termino)));
+        }
+
+        totalRegistros = await query.CountAsync();
+
+        if (totalRegistros > 0)
+            totalPaginas = (int)Math.Ceiling(totalRegistros / (double)elementosPorPagina);
+        else
+            totalPaginas = 0;
+
+        productosFiltrados = await query
+            .OrderBy(p => p.Nombre)
+            .Skip((paginaActual - 1) * elementosPorPagina)
+            .Take(elementosPorPagina)
+            .ToListAsync();
     }
+
+    private async Task CambiarPagina(int nuevaPagina)
+    {
+        if (nuevaPagina < 1 || nuevaPagina > totalPaginas) return;
+        
+        paginaActual = nuevaPagina;
+        await CargarProductos();
+    }
+
     private async Task HandleKeyUp(KeyboardEventArgs e)
     {
         if (e.Key == "Enter")
         {
-            await BuscarParaEditar();
+            await BuscarParaEditar(); 
         }
     }
-    private void AlEscribir(ChangeEventArgs e)
+
+    private async Task AlEscribir(ChangeEventArgs e)
     {
         terminoBusqueda = e.Value?.ToString() ?? "";
-        var todosLosProductosSeguro = todosLosProductos ?? new List<Producto>();
-
-        if (string.IsNullOrWhiteSpace(terminoBusqueda))
-        {
-            productosFiltrados = todosLosProductosSeguro.ToList();
-        }
-        else
-        {
-            productosFiltrados = todosLosProductosSeguro
-                .Where(p => p.Nombre.Contains(terminoBusqueda, StringComparison.OrdinalIgnoreCase) ||
-                            (p.CodigoSku != null && p.CodigoSku.Contains(terminoBusqueda, StringComparison.OrdinalIgnoreCase)))
-                .ToList();
-        }
+        paginaActual = 1;
+        await CargarProductos();
     }
+
     private async Task BuscarParaEditar()
     {
-        if(string.IsNullOrEmpty(terminoBusqueda))
-        {
-            return;
-        }
+        if(string.IsNullOrEmpty(terminoBusqueda)) return;
+        var termino = terminoBusqueda.ToLower();
+        using var db = DbFactory.CreateDbContext();
+        // Buscamos coincidencia exacta de SKU en la BD
+        var matchExacto = await db.Productos.FirstOrDefaultAsync(p => p.CodigoSku.ToLower() == termino);
 
-        var todosLosProductosSeguro = todosLosProductos ?? new List<Producto>();
-
-        var matchExacto = todosLosProductosSeguro
-            .FirstOrDefault(p => p.CodigoSku != null && p.CodigoSku.Equals(terminoBusqueda, StringComparison.OrdinalIgnoreCase));
-            
-         if (matchExacto != null)
+        if (matchExacto != null)
         {
             terminoBusqueda = "";
-            productosFiltrados = todosLosProductosSeguro.ToList();
             await PrepararEdicion(matchExacto);
+            paginaActual = 1;
+            await CargarProductos(); 
         }
         else
         {
-           _ = Notifier.SetMessage("No se encontró ningún producto con el código SKU proporcionado.", "warning");
+           if (totalRegistros == 0)
+                _ = Notifier.SetMessage("No se encontró producto con ese criterio.", "warning");
         }
     }
 
-    private void LimpiarBusqueda()
+    private async Task LimpiarBusqueda()
     {
         terminoBusqueda = "";
-        productosFiltrados = todosLosProductos?.ToList() ?? new List<Producto>();
+        paginaActual = 1;
+        await CargarProductos();
     }
+
     private async Task IniciarNuevoProducto()
     {
         productoModel = new();
@@ -371,7 +425,6 @@
 
     private async Task PrepararEdicion(Producto productoAEditar)
     {
-        // Crear una copia para editar sin afectar la lista visual inmediatamente
         productoModel = new Producto
         {
             ProductoId = productoAEditar.ProductoId,
@@ -398,7 +451,6 @@
     private async Task GuardarProducto()
     {
         using var db = DbFactory.CreateDbContext();
-
         if (editando)
         {
             db.Productos.Update(productoModel);
@@ -409,9 +461,10 @@
         }
 
         await db.SaveChangesAsync();
-        await CargarProductos();
+        await CargarProductos(); // Recargar la tabla
         await CerrarModal();
     }
+
     private async Task CargarCategorias()
     {
         using var db = DbFactory.CreateDbContext();
@@ -432,20 +485,12 @@
     private async Task GuardarCategoriaRapida()
     {
         if (string.IsNullOrWhiteSpace(nuevaCategoriaModel.Nombre)) return;
-
         using var db = DbFactory.CreateDbContext();
         db.Categorias.Add(nuevaCategoriaModel);
         await db.SaveChangesAsync();
-
-        // Recargar la lista para que aparezca en el dropdown
         await CargarCategorias();
-        
-        // Seleccionar automáticamente la categoría recién creada en el producto
         productoModel.CategoriaId = nuevaCategoriaModel.CategoriaId;
-
         await CerrarModalCategoria();
-        
-        // Notificación opcional
         _ = Notifier.SetMessage("Categoría creada exitosamente", "success");
     }
 
@@ -454,10 +499,10 @@
         productoAEliminar = producto;
         await JSRuntime.InvokeVoidAsync("bootstrapModalFunctions.show", "confirmarEliminacionModal");
     }
+
     private async Task ConfirmarEliminacion()
     {
         if (productoAEliminar == null) return;
-
         try
         {
             using var db = DbFactory.CreateDbContext();
@@ -466,13 +511,16 @@
             {
                 db.Productos.Remove(producto);
                 await db.SaveChangesAsync();
-                _ = Notifier.SetMessage($"El producto '{productoAEliminar.Nombre}' ha sido eliminado exitosamente.", "success");
+                _ = Notifier.SetMessage($"Producto eliminado.", "success");
+                
+                if(productosFiltrados.Count == 1 && paginaActual > 1) paginaActual--;
+                
                 await CargarProductos();
             }
         }
         catch (Exception ex)
         {
-            _ = Notifier.SetMessage("Error al eliminar el producto: " + ex.Message, "danger", 5000);
+            _ = Notifier.SetMessage("Error: " + ex.Message, "danger");
         }
         finally
         {
