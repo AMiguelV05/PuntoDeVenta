@@ -3,121 +3,314 @@
 @using Microsoft.EntityFrameworkCore
 @using PuntoDeVenta.Data
 @inject IDbContextFactory<ApplicationDbContext> DbFactory
+@inject NavigationManager NavManager
 @inject IJSRuntime JSRuntime
+@inject NotificationService Notifier
+@inject EstadoAutenticacionService AuthService
 
 <PageTitle>Gestión de Categorías</PageTitle>
 
-<h3>Gestión de Categorías</h3>
+<div class="container-fluid pt-3">
+    
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h3 class="text-primary m-0">
+            <i class="bi bi-tags-fill me-2"></i>Directorio de Categorías
+        </h3>
+        <button class="btn btn-success shadow-sm" @onclick="IniciarNuevaCategoria">
+            <i class="bi bi-plus-lg me-2"></i>Nueva Categoría
+        </button>
+    </div>
 
-<EditForm Model="categoriaModel" OnValidSubmit="GuardarCategoria" FormName="gestionarCategorias">
-    <DataAnnotationsValidator />
-    <h4>@(editando ? "Editar Categoría" : "Nueva Categoría")</h4>
-    <div class="card mb-4">
-        <div class="card-body">
-            <div class="mb-3">
-                <label>Nombre:</label>
-                <InputText @bind-Value="categoriaModel.Nombre" class="form-control" />
-                <ValidationMessage For="@(() => categoriaModel.Nombre)" />
+    <div class="card shadow-lg border-0">
+        <div class="card-header bg-white py-3">
+            <div class="row align-items-center">
+                <div class="col">
+                    <div class="input-group">
+                        <span class="input-group-text bg-light text-primary border-end-0">
+                            <i class="bi bi-search"></i>
+                        </span>
+                        <InputText @bind-Value="terminoBusqueda" 
+                                   class="form-control border-control-lg" 
+                                   placeholder="Buscar categoría..." 
+                                   @oninput="FiltrarCategorias" />
+                        <button class="btn btn-outline-secondary" type="button" @onclick="LimpiarBusqueda">
+                            <i class="bi bi-x-lg"></i>
+                        </button>
+                    </div>
+                </div>
             </div>
-            <button type="submit" class="btn btn-primary">@(editando ? "Actualizar" : "Crear")</button>
-            @if (editando)
+        </div>
+
+        <div class="card-body p-0">
+            @if (categoriasFiltradas == null)
             {
-                <button type="button" class="btn btn-secondary" @onclick="CancelarEdicion">Cancelar</button>
+                <div class="p-4 text-center text-muted">
+                    <div class="spinner-border text-primary mb-2" role="status"></div>
+                    <p>Cargando categorías...</p>
+                </div>
+            }
+            else if (!categoriasFiltradas.Any())
+            {
+                <div class="p-4 text-center text-muted">
+                    <i class="bi bi-search display-4 mb-3"></i>
+                    <p class="fs-5">No se encontraron categorías con '<strong>@terminoBusqueda</strong>'.</p>
+                </div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover table-striped align-middle mb-0">
+                        <thead class="table-dark">
+                            <tr>
+                                <th class="ps-3"><i class="bi bi-tag me-2"></i>Nombre de Categoría</th>
+                                <th class="text-center" style="width: 150px">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var cat in categoriasFiltradas)
+                            {
+                                <tr>
+                                    <td class="ps-3 fw-bold text-secondary">@cat.Nombre</td>
+                                    <td class="text-center pe-3">
+                                        <div class="btn-group shadow-sm">
+                                            <button class="btn btn-sm btn-outline-primary" 
+                                                    @onclick="() => PrepararEdicion(cat)" 
+                                                    title="Editar">
+                                                <i class="bi bi-pencil-square"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-danger" 
+                                                    @onclick="() => SolicitarEliminacionCategoria(cat)" 
+                                                    title="Eliminar">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
             }
         </div>
+        <div class="card-footer bg-light text-muted small">
+             Mostrando @((categoriasFiltradas != null) ? categoriasFiltradas.Count : 0) de @((todasLasCategorias != null) ? todasLasCategorias.Count : 0) categorías.
+        </div>
     </div>
-</EditForm>
+</div>
 
-@if (categorias == null)
-{
-    <p><em>Cargando...</em></p>
-}
-else
-{
-    <table class="table table-striped">
-        <thead>
-            <tr>
-                <th>Nombre</th>
-                <th>Acciones</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var cat in categorias)
-            {
-                <tr>
-                    <td>@cat.Nombre</td>
-                    <td>
-                        <button class="btn btn-sm btn-warning" @onclick="() => PrepararEdicion(cat)">Editar</button>
-                        <button class="btn btn-sm btn-danger" @onclick="() => EliminarCategoria(cat.CategoriaId)">Eliminar</button>
-                    </td>
-                </tr>
-            }
-        </tbody>
-    </table>
-}
+<div class="modal fade" id="categoriaModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header @(editando ? "bg-warning" : "bg-success") text-white">
+                <h5 class="modal-title">
+                    <i class="bi @(editando ? "bi-pencil-square" : "bi-plus-circle-fill") me-2"></i>
+                    @(editando ? "Editar Categoría" : "Nueva Categoría")
+                </h5>
+                <button type="button" class="btn-close btn-close-white" @onclick="CerrarModal"></button>
+            </div>
+            
+            <EditForm Model="categoriaModel" OnValidSubmit="GuardarCategoria" FormName="gestionarCategorias">
+                <DataAnnotationsValidator />
+                
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-secondary">Nombre:</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-tag"></i></span>
+                            <InputText @bind-Value="categoriaModel.Nombre" class="form-control" placeholder="Ej. Bebidas" />
+                        </div>
+                        <ValidationMessage For="@(() => categoriaModel.Nombre)" class="text-danger small" />
+                    </div>
+                </div>
+                
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary" @onclick="CerrarModal">Cancelar</button>
+                    <button type="submit" class="btn @(editando ? "btn-warning" : "btn-success") px-4">
+                        <i class="bi @(editando ? "bi-check-lg" : "bi-save") me-2"></i>
+                        @(editando ? "Actualizar" : "Guardar")
+                    </button>
+                </div>
+            </EditForm>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="confirmarEliminacionCatModal" tabindex="-1" aria-hidden="true" style="z-index: 1070;">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>Confirmar Eliminación
+                </h5>
+                <button type="button" class="btn-close btn-close-white" @onclick="CerrarModalEliminacion" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center p-4">
+                <div class="mb-3 text-danger">
+                    <i class="bi bi-trash3 display-1"></i>
+                </div>
+                <h5 class="mb-3">¿Estás seguro?</h5>
+                <p class="text-muted mb-0">
+                    Estás a punto de eliminar la categoría:
+                </p>
+                @if (categoriaAEliminar != null)
+                {
+                    <p class="fw-bold fs-5 text-dark mt-2">@categoriaAEliminar.Nombre</p>
+                }
+                <p class="text-muted small mt-3">
+                    Esta acción es irreversible. Asegúrate de que no haya productos dependiendo de esta categoría.
+                </p>
+            </div>
+            <div class="modal-footer bg-light justify-content-center">
+                <button type="button" class="btn btn-secondary px-4" @onclick="CerrarModalEliminacion">
+                    <i class="bi bi-x-lg me-2"></i>Cancelar
+                </button>
+                <button type="button" class="btn btn-danger px-4" @onclick="ConfirmarEliminacion">
+                    <i class="bi bi-trash-fill me-2"></i>Sí, Eliminar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 
 @code {
-    private List<Categoria>? categorias;
+    private List<Categoria>? todasLasCategorias;
+    private List<Categoria>? categoriasFiltradas;
     private Categoria categoriaModel = new();
+    private Categoria? categoriaAEliminar;
     private bool editando = false;
+    private string terminoBusqueda = "";
 
     protected override async Task OnInitializedAsync()
     {
+         if (AuthService.EmpleadoActual == null)
+        {
+            NavManager.NavigateTo("/login");
+            return;
+        }
+        if (AuthService.EmpleadoActual.Puesto == "en espera")
+        {
+            _ = Notifier.SetMessage("Acceso no autorizado. Por favor, espera a que un Admin te conceda el acceso.", "warning", 3000);
+            NavManager.NavigateTo("/");
+            return;
+        }
         await CargarCategorias();
     }
 
     private async Task CargarCategorias()
     {
         using var db = DbFactory.CreateDbContext();
-        categorias = await db.Categorias.AsNoTracking().OrderBy(c => c.Nombre).ToListAsync();
+        todasLasCategorias = await db.Categorias.AsNoTracking().OrderBy(c => c.Nombre).ToListAsync();
+        categoriasFiltradas = todasLasCategorias.ToList();
     }
 
-    private void PrepararEdicion(Categoria categoriaAEditar)
+    private void FiltrarCategorias(ChangeEventArgs e)
     {
-        // Asumiendo que Categoria tiene CategoriaId y Nombre
+        terminoBusqueda = e.Value?.ToString() ?? "";
+        var source = todasLasCategorias ?? new List<Categoria>();
+
+        if (string.IsNullOrWhiteSpace(terminoBusqueda))
+        {
+            categoriasFiltradas = source.ToList();
+        }
+        else
+        {
+            categoriasFiltradas = source
+                .Where(c => c.Nombre.Contains(terminoBusqueda, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+        }
+    }
+
+    private void LimpiarBusqueda()
+    {
+        terminoBusqueda = "";
+        categoriasFiltradas = todasLasCategorias?.ToList() ?? new List<Categoria>();
+    }
+
+    private async Task IniciarNuevaCategoria()
+    {
+        categoriaModel = new();
+        editando = false;
+        await JSRuntime.InvokeVoidAsync("bootstrapModalFunctions.show", "categoriaModal");
+    }
+
+    private async Task PrepararEdicion(Categoria categoriaAEditar)
+    {
         categoriaModel = new Categoria
         {
             CategoriaId = categoriaAEditar.CategoriaId,
             Nombre = categoriaAEditar.Nombre
         };
         editando = true;
+        await JSRuntime.InvokeVoidAsync("bootstrapModalFunctions.show", "categoriaModal");
+    }
+
+    private async Task CerrarModal()
+    {
+        await JSRuntime.InvokeVoidAsync("bootstrapModalFunctions.hide", "categoriaModal");
+        await Task.Delay(300); // Esperar animación
+        categoriaModel = new();
+        editando = false;
     }
 
     private async Task GuardarCategoria()
     {
-        using var db = DbFactory.CreateDbContext();
-        if (editando)
-        {
-            db.Categorias.Update(categoriaModel);
-        }
-        else
-        {
-            await db.Categorias.AddAsync(categoriaModel);
-        }
-        await db.SaveChangesAsync();
-        await CargarCategorias();
-        CancelarEdicion();
-    }
-
-    private async Task EliminarCategoria(long id)
-    {
-        var confirmado = await JSRuntime.InvokeAsync<bool>("confirm", "¿Estás seguro que quieres eliminar esta categoría?");
-        if (confirmado)
+        try
         {
             using var db = DbFactory.CreateDbContext();
-            var categoria = await db.Categorias.FindAsync(id);
-            if (categoria != null)
+            if (editando)
             {
-                db.Categorias.Remove(categoria);
+                db.Categorias.Update(categoriaModel);
+            }
+            else
+            {
+                await db.Categorias.AddAsync(categoriaModel);
+            }
+            await db.SaveChangesAsync();
+            await CargarCategorias();
+            await CerrarModal();
+            _ = Notifier.SetMessage(editando ? "Categoría actualizada." : "Categoría creada exitosamente.", "success", 3000);
+        }
+        catch (Exception ex)
+        {
+            _ = Notifier.SetMessage($"Error: {ex.Message}", "error", 5000);
+        }
+    }
+
+    private async Task SolicitarEliminacionCategoria(Categoria categoria)
+    {
+        categoriaAEliminar = categoria;
+        await JSRuntime.InvokeVoidAsync("bootstrapModalFunctions.show", "confirmarEliminacionCatModal");
+    }
+
+    private async Task ConfirmarEliminacion()
+    {
+        if (categoriaAEliminar == null) return;
+        try
+        {
+            using var db = DbFactory.CreateDbContext();
+            var cat = await db.Categorias.FindAsync(categoriaAEliminar.CategoriaId);
+            if (cat != null)
+            {
+                db.Categorias.Remove(cat);
                 await db.SaveChangesAsync();
+                _ = Notifier.SetMessage($"Categoría '{categoriaAEliminar.Nombre}' eliminada.", "success");
                 await CargarCategorias();
             }
         }
+        catch (Exception ex)
+        {
+
+            _ = Notifier.SetMessage($"No se pudo eliminar: {ex}", "danger", 5000);
+        }
+        finally
+        {
+            await CerrarModalEliminacion();
+        }
     }
 
-    private void CancelarEdicion()
+    private async Task CerrarModalEliminacion()
     {
-        categoriaModel = new();
-        editando = false;
+        await JSRuntime.InvokeVoidAsync("bootstrapModalFunctions.hide", "confirmarEliminacionCatModal");
+        categoriaAEliminar = null;
     }
 }

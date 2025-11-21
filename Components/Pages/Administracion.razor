@@ -5,6 +5,7 @@
 @using Microsoft.EntityFrameworkCore
 @inject IDbContextFactory<ApplicationDbContext> DbFactory
 @inject EstadoAutenticacionService AuthService
+@inject NotificationService Notifier
 @inject NavigationManager NavManager
 @implements IDisposable
 
@@ -137,36 +138,13 @@ else
             empleadoDb.Puesto = nuevoPuesto;
             await db.SaveChangesAsync();
             empleado.Puesto = nuevoPuesto; // Actualizar en la lista local
-            statusMessage = $"Puesto de {empleado.Nombre} actualizado a '{nuevoPuesto}'.";
-            IniciarTimerMensaje();
+            _ = Notifier.SetMessage($"Puesto de {empleado.Nombre} actualizado a '{nuevoPuesto}'.", "success");
             StateHasChanged();
         }
         catch (Exception ex)
         {
-            statusMessage = $"Error al actualizar: {ex.Message}";
+            _ = Notifier.SetMessage($"Error al actualizar: {ex.Message}", "error");
         }
-    }
-
-    private void IniciarTimerMensaje()
-    {
-        // Si ya hay un timer, lo reseteamos
-        statusTimer?.Stop();
-        statusTimer?.Dispose();
-
-        statusTimer = new System.Timers.Timer(3000); // 3 segundos
-        statusTimer.Elapsed += (sender, e) =>
-        {
-            InvokeAsync(() =>
-            {
-                statusMessage = null;
-                StateHasChanged();
-            });
-            
-            // Detener y limpiar el timer
-            statusTimer?.Stop();
-            statusTimer?.Dispose();
-        };
-        statusTimer.Start();
     }
 
     private string GetBadgeClass(string puesto)
@@ -183,6 +161,5 @@ else
     public void Dispose()
     {
         AuthService.OnChange -= StateHasChanged;
-        statusTimer?.Dispose();
     }
 }

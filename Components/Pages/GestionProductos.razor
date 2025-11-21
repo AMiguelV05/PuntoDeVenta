@@ -3,6 +3,8 @@
 @using Microsoft.EntityFrameworkCore
 @using PuntoDeVenta.Data
 @inject IDbContextFactory<ApplicationDbContext> DbFactory
+@inject EstadoAutenticacionService AuthService
+@inject NavigationManager NavManager
 @inject NotificationService Notifier
 @inject IJSRuntime JSRuntime
 
@@ -287,6 +289,17 @@
 
     protected override async Task OnInitializedAsync()
     {
+         if (AuthService.EmpleadoActual == null)
+        {
+            NavManager.NavigateTo("/login");
+            return;
+        }
+        if (AuthService.EmpleadoActual.Puesto == "en espera")
+        {
+            _ = Notifier.SetMessage("Acceso no autorizado. Por favor, espera a que un Admin te conceda el acceso.", "warning", 3000);
+            NavManager.NavigateTo("/");
+            return;
+        }
         await Task.WhenAll(CargarProductos(), CargarCategorias());
     }
 
