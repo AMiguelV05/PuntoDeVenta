@@ -62,15 +62,21 @@
                     <table class="table table-hover table-striped align-middle mb-0">
                         <thead class="table-dark">
                             <tr>
-                                <th class="ps-3"><i class="bi bi-tag me-2"></i>Nombre de Categoría</th>
-                                <th class="text-center" style="width: 150px">Acciones</th>
+                                <th class="text-center"><i class="bi bi-tag me-2"></i>Nombre de Categoría</th>
+                                <th class="text-center"><i class="bi bi-boxes me-2"></i>Productos Asociados</th>
+                                <th class="text-center">Acciones</th>
                             </tr>
                         </thead>
                         <tbody>
                             @foreach (var cat in categoriasFiltradas)
                             {
                                 <tr>
-                                    <td class="ps-3 fw-bold text-secondary">@cat.Nombre</td>
+                                    <td class="fw-bold text-secondary">@cat.Nombre</td>
+                                    <td class="text-center">
+                                        <button class="btn btn-sm btn-primary">
+                                            Ver Productos
+                                        </button>
+                                    </td>
                                     <td class="text-center pe-3">
                                         <div class="btn-group shadow-sm">
                                             <button class="btn btn-sm btn-outline-primary" 
@@ -92,8 +98,33 @@
                 </div>
             }
         </div>
-        <div class="card-footer bg-light text-muted small">
-             Mostrando @((categoriasFiltradas != null) ? categoriasFiltradas.Count : 0) de @((todasLasCategorias != null) ? todasLasCategorias.Count : 0) categorías.
+        <div class="card-footer bg-light py-3">
+            <div class="row align-items-center">
+                <div class="col-md-4 text-muted small mb-2 mb-md-0">
+                    Mostrando @(categoriasFiltradas?.Count ?? 0) de @totalRegistros categorías.
+                </div>
+                <div class="col-md-8 d-flex justify-content-md-end justify-content-center">
+                    <nav aria-label="Paginación de categorías">
+                        <ul class="pagination pagination-sm mb-0 shadow-sm">
+                            <li class="page-item @(paginaActual == 1 ? "disabled" : "")">
+                                <button class="page-link" @onclick="() => CambiarPagina(paginaActual - 1)">
+                                    <span aria-hidden="true">&laquo;</span>
+                                </button>
+                            </li>
+                            <li class="page-item disabled">
+                                <span class="page-link text-dark bg-white border-top border-bottom">
+                                    Pág @paginaActual / @(totalPaginas == 0 ? 1 : totalPaginas)
+                                </span>
+                            </li>
+                            <li class="page-item @(paginaActual == totalPaginas || totalPaginas == 0 ? "disabled" : "")">
+                                <button class="page-link" @onclick="() => CambiarPagina(paginaActual + 1)">
+                                    <span aria-hidden="true">&raquo;</span>
+                                </button>
+                            </li>
+                        </ul>
+                    </nav>
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -173,12 +204,18 @@
 </div>
 
 @code {
-    private List<Categoria>? todasLasCategorias;
     private List<Categoria>? categoriasFiltradas;
     private Categoria categoriaModel = new();
     private Categoria? categoriaAEliminar;
+    private List<Producto> listaProductos = new();
     private bool editando = false;
     private string terminoBusqueda = "";
+
+    // Paginación
+    private int paginaActual = 1;
+    private int elementosPorPagina = 10;
+    private int totalPaginas = 0;
+    private int totalRegistros = 0;
 
     protected override async Task OnInitializedAsync()
     {
@@ -193,37 +230,53 @@
             NavManager.NavigateTo("/");
             return;
         }
-        await CargarCategorias();
+        await Task.WhenAll(CargarCategorias(), CargarProductos());
     }
 
     private async Task CargarCategorias()
     {
         using var db = DbFactory.CreateDbContext();
-        todasLasCategorias = await db.Categorias.AsNoTracking().OrderBy(c => c.Nombre).ToListAsync();
-        categoriasFiltradas = todasLasCategorias.ToList();
+        var query = db.Categorias.AsNoTracking().AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(terminoBusqueda))
+        {
+            var termino = terminoBusqueda.ToLower();
+            query = query.Where(c => c.Nombre.ToLower().Contains(termino));
+        }
+
+        totalRegistros = await query.CountAsync();
+
+        if (totalRegistros > 0)
+            totalPaginas = (int)Math.Ceiling(totalRegistros / (double)elementosPorPagina);
+        else
+            totalPaginas = 0;
+
+        categoriasFiltradas = await query
+            .OrderBy(c => c.Nombre)
+            .Skip((paginaActual - 1) * elementosPorPagina)
+            .Take(elementosPorPagina)
+            .ToListAsync();
     }
 
-    private void FiltrarCategorias(ChangeEventArgs e)
+    private async Task CambiarPagina(int nuevaPagina)
+    {
+        if (nuevaPagina < 1 || nuevaPagina > totalPaginas) return;
+        paginaActual = nuevaPagina;
+        await CargarCategorias();
+    }
+
+    private async Task FiltrarCategorias(ChangeEventArgs e)
     {
         terminoBusqueda = e.Value?.ToString() ?? "";
-        var source = todasLasCategorias ?? new List<Categoria>();
-
-        if (string.IsNullOrWhiteSpace(terminoBusqueda))
-        {
-            categoriasFiltradas = source.ToList();
-        }
-        else
-        {
-            categoriasFiltradas = source
-                .Where(c => c.Nombre.Contains(terminoBusqueda, StringComparison.OrdinalIgnoreCase))
-                .ToList();
-        }
+        paginaActual = 1;
+        await CargarCategorias();
     }
 
-    private void LimpiarBusqueda()
+    private async Task LimpiarBusqueda()
     {
         terminoBusqueda = "";
-        categoriasFiltradas = todasLasCategorias?.ToList() ?? new List<Categoria>();
+        paginaActual = 1;
+        await CargarCategorias();
     }
 
     private async Task IniciarNuevaCategoria()
@@ -297,10 +350,9 @@
                 await CargarCategorias();
             }
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-
-            _ = Notifier.SetMessage($"No se pudo eliminar: {ex}", "danger", 5000);
+            _ = Notifier.SetMessage("Verifica que la categoría no esté asociada a algún producto", "warning", 5000);
         }
         finally
         {
@@ -312,5 +364,11 @@
     {
         await JSRuntime.InvokeVoidAsync("bootstrapModalFunctions.hide", "confirmarEliminacionCatModal");
         categoriaAEliminar = null;
+    }
+
+    private async Task CargarProductos()
+    {
+        using var db = DbFactory.CreateDbContext();
+        listaProductos = await db.Productos.AsNoTracking().OrderBy(p => p.Nombre).ToListAsync();
     }
 }

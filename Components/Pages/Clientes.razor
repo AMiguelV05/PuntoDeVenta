@@ -122,9 +122,34 @@
                 </div>
             }
         </div>
-        <div class="card-footer bg-light text-muted small">
-             Mostrando @((clientesFiltrados != null) ? clientesFiltrados.Count : 0) de @((todosLosClientes != null) ? todosLosClientes.Count : 0) clientes.
+        <div class="card-footer bg-light py-3">
+        <div class="row align-items-center">
+            <div class="col-md-4 text-muted small mb-2 mb-md-0">
+                Mostrando @(clientesFiltrados?.Count ?? 0) de @totalRegistros clientes.
+            </div>
+            <div class="col-md-8 d-flex justify-content-md-end justify-content-center">
+                <nav aria-label="Paginación de clientes">
+                    <ul class="pagination pagination-sm mb-0 shadow-sm">
+                        <li class="page-item @(paginaActual == 1 ? "disabled" : "")">
+                            <button class="page-link" @onclick="() => CambiarPagina(paginaActual - 1)">
+                                <span aria-hidden="true">&laquo;</span>
+                            </button>
+                        </li>
+                        <li class="page-item disabled">
+                            <span class="page-link text-dark bg-white border-top border-bottom">
+                                Pág @paginaActual / @(totalPaginas == 0 ? 1 : totalPaginas)
+                            </span>
+                        </li>
+                        <li class="page-item @(paginaActual == totalPaginas || totalPaginas == 0 ? "disabled" : "")">
+                            <button class="page-link" @onclick="() => CambiarPagina(paginaActual + 1)">
+                                <span aria-hidden="true">&raquo;</span>
+                            </button>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
         </div>
+    </div>
     </div>
 </div>
 
@@ -240,13 +265,17 @@
 </div>
 
 @code {
-    private List<Cliente>? todosLosClientes;
     private List<Cliente>? clientesFiltrados;
     private Cliente clienteModel = new();
     private Cliente? clienteAEliminar;
     private bool editando = false;
     private string terminoBusqueda = "";
 
+    // Paginacion
+    private int paginaActual = 1;
+    private int elementosPorPagina = 10;
+    private int totalPaginas = 0;
+    private int totalRegistros = 0;
     protected override async Task OnInitializedAsync()
     {
          if (AuthService.EmpleadoActual == null)
@@ -266,32 +295,48 @@
     private async Task CargarClientes()
     {
         using var db = DbFactory.CreateDbContext();
-        todosLosClientes = await db.Clientes.AsNoTracking().OrderBy(c => c.Nombre).ToListAsync();
-        clientesFiltrados = todosLosClientes.ToList();
+        var query = db.Clientes.AsNoTracking().AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(terminoBusqueda))
+        {
+            var termino = terminoBusqueda.ToLower();
+            query = query.Where(c => c.Nombre.ToLower().Contains(termino) || 
+                                    (c.Telefono != null && c.Telefono.Contains(termino)));
+        }
+
+        totalRegistros = await query.CountAsync();
+
+        if (totalRegistros > 0)
+            totalPaginas = (int)Math.Ceiling(totalRegistros / (double)elementosPorPagina);
+        else
+            totalPaginas = 0;
+
+        clientesFiltrados = await query
+            .OrderBy(c => c.Nombre)
+            .Skip((paginaActual - 1) * elementosPorPagina)
+            .Take(elementosPorPagina)
+            .ToListAsync();
     }
 
-    private void FiltrarClientes(ChangeEventArgs e)
+    private async Task CambiarPagina(int nuevaPagina)
+    {
+        if (nuevaPagina < 1 || nuevaPagina > totalPaginas) return;
+        paginaActual = nuevaPagina;
+        await CargarClientes();
+    }
+
+    private async Task FiltrarClientes(ChangeEventArgs e)
     {
         terminoBusqueda = e.Value?.ToString() ?? "";
-        var todosLosClientesSeguro = todosLosClientes ?? new List<Cliente>();
-
-        if (string.IsNullOrWhiteSpace(terminoBusqueda))
-        {
-            clientesFiltrados = todosLosClientesSeguro.ToList();
-        }
-        else
-        {
-            clientesFiltrados = todosLosClientesSeguro
-                .Where(c => c.Nombre.Contains(terminoBusqueda, StringComparison.OrdinalIgnoreCase) || 
-                            (c.Telefono != null && c.Telefono.Contains(terminoBusqueda, StringComparison.OrdinalIgnoreCase)))
-                .ToList();
-        }
+        paginaActual = 1; // Reiniciar a la primera página al buscar
+        await CargarClientes();
     }
 
-    private void LimpiarBusqueda()
+    private async Task LimpiarBusqueda()
     {
         terminoBusqueda = "";
-        clientesFiltrados = todosLosClientes?.ToList() ?? new List<Cliente>();
+        paginaActual = 1;
+        await CargarClientes();
     }
 
     private async Task IniciarNuevoCliente()
