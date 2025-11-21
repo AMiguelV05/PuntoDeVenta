@@ -9,138 +9,275 @@
 @inject NavigationManager NavManager
 @inject IJSRuntime JSRuntime
 
-
 <PageTitle>Reporte de Ventas</PageTitle>
-<h3>Reporte de Ventas</h3>
 
-<div class="card mb-3">
-    <div class="card-body">
-        <h5 class="card-title">Filtrar por Fecha</h5>
-        <div class="row g-3 align-items-center">
-            <div class="col-auto">
-                <label for="fechaInicio" class="col-form-label">Desde:</label>
-            </div>
-            <div class="col-auto">
-                <InputDate id="fechaInicio" @bind-Value="fechaInicio" class="form-control" />
-            </div>
-            <div class="col-auto">
-                <label for="fechaFin" class="col-form-label">Hasta:</label>
-            </div>
-            <div class="col-auto">
-                <InputDate id="fechaFin" @bind-Value="fechaFin" class="form-control" />
-            </div>
-            <div class="col-auto">
-                <button class="btn btn-primary" @onclick="CargarReporte">Generar Reporte</button>
-            </div>
-        </div>
+<div class="container-fluid pt-3">
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h3 class="text-primary m-0">
+            <i class="bi bi-bar-chart-line me-2"></i>Reporte de Ventas
+        </h3>
     </div>
-</div>
 
-@if (ventas == null)
-{
-    <p><em>Selecciona un rango de fechas y genera el reporte.</em></p>
-}
-else if (!ventas.Any())
-{
-    <p><em>No se encontraron ventas en ese rango de fechas.</em></p>
-}
-else
-{
-    <h4>Total de Ventas: @ventas.Sum(v => v.Total).ToString("C")</h4>
-    <table class="table table-striped">
-        <thead>
-            <tr>
-                <th>ID Venta</th>
-                <th>Fecha</th>
-                <th>Cliente</th>
-                <th>Total</th>
-                <th>Acciones</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var v in ventas)
-            {
-                <tr>
-                    <td>@v.VentaId</td>
-                    <td>@v.FechaVenta.LocalDateTime.ToString("g")</td>
-                    <td>@(v.Cliente?.Nombre ?? "Público General")</td>
-                    <td>@v.Total.ToString("C")</td>
-                    <td>
-                        <button class="btn btn-sm btn-info" @onclick="() => VerDetalle(v.VentaId)">Ver Detalle</button>
-                    </td>
-                </tr>
-            }
-        </tbody>
-    </table>
-}
-
-<div class="modal fade" id="detalleVentaModal" tabindex="-1" ariaaria-labelledby="detalleVentaModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-        @if (ventaSeleccionada != null)
-        {
-            <div class="modal-header">
-                <h5 class="modal-title">Detalle de Venta #@ventaSeleccionada.VentaId</h5>
-                <button type="button" class="btn-close" @onclick="CerrarDetalle"></button>
-            </div>
-            <div class="modal-body">
-                <div class="row mb-3">
-                    <div class="col-md-6">
-                        <p class="mb-0"><strong>Cliente:</strong> @(ventaSeleccionada.Cliente?.Nombre ?? "Público General")</p>
-                    </div>
-                    <div class="col-md-6">
-                        <p class="mb-0 text-center"><strong>Vendedor:</strong> @(ventaSeleccionada.Empleado?.Nombre ?? "N/A")</p>
+    <div class="card shadow-lg border-0">
+        <div class="card-header bg-white py-3">
+            <div class="row g-3 align-items-center">
+                <div class="col-md-4 col-lg-3">
+                    <div class="input-group">
+                        <span class="input-group-text bg-light text-primary border-end-0">
+                            <i class="bi bi-calendar-event"></i>
+                        </span>
+                        <InputDate @bind-Value="fechaInicio" class="form-control border-start-0" />
                     </div>
                 </div>
-                <p><strong>Fecha:</strong> @ventaSeleccionada.FechaVenta.LocalDateTime.ToString("g")</p>
-                @if (ventaSeleccionada.AplicarIVA.HasValue)
-                {
-                    <p><strong>IVA Agregado:</strong> @(ventaSeleccionada.AplicarIVA.Value ? ((ventaSeleccionada.Total/1.16m)*0.16m).ToString("C") : "Libre de IVA")</p>
-                }
-                else
-                {
-                    <p><strong>IVA Agregado:</strong> No especificado</p>
-                }
-                <table class="table table-striped table-sm">
-                    <thead>
-                        <tr>
-                            <th style="width: 30%;" class="text-center">Producto</th>
-                            <th style="width: 15%;" class="text-center">Cantidad</th>
-                            <th style="width: 15%;" class="text-center">Precio Unit.</th>
-                            <th style="width: 15%;" class="text-center">Subtotal</th>
-                            <th style="width: 15%;" class="text-center">Descuento</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var det in ventaSeleccionada.DetalleVentas)
-                        {
+
+                <div class="col-auto text-muted">
+                    <i class="bi bi-arrow-right"></i>
+                </div>
+
+                <div class="col-md-4 col-lg-3">
+                    <div class="input-group">
+                        <span class="input-group-text bg-light text-primary border-end-0">
+                            <i class="bi bi-calendar-check"></i>
+                        </span>
+                        <InputDate @bind-Value="fechaFin" class="form-control border-start-0" />
+                    </div>
+                </div>
+
+                <div class="col-auto">
+                    <button class="btn btn-success shadow-sm" @onclick="CargarReporte">
+                        <i class="bi bi-search me-2"></i>Generar Reporte
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="card-body p-0">
+            @if (ventas == null)
+            {
+                <div class="p-5 text-center text-muted">
+                    <i class="bi bi-calendar-range display-4 d-block mb-2"></i>
+                    <p class="fs-5">Selecciona un rango de fechas para comenzar.</p>
+                </div>
+            }
+            else if (!ventas.Any())
+            {
+                <div class="p-5 text-center text-muted">
+                    <div class="spinner-border text-primary mb-2" role="status" style="display: none;"></div> <i class="bi bi-inbox display-4 d-block mb-2"></i>
+                    <p class="fs-5">No se encontraron ventas entre el <strong>@fechaInicio.ToShortDateString()</strong> y el <strong>@fechaFin.ToShortDateString()</strong>.</p>
+                </div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover table-striped align-middle mb-0">
+                        <thead class="table-dark">
                             <tr>
-                                <td style="word-wrap: break-word">@det.Producto.Nombre</td>
-                                <td class="text-center">@det.Cantidad</td>
-                                <td class="text-center">@det.PrecioUnitario.ToString("C")</td>
-                                <td class="text-center">@((det.Cantidad * det.PrecioUnitario).ToString("C"))</td>
-                                <td class="text-center text-danger">-@det.Descuento.ToString("C")</td>
+                                <th class="ps-3">ID Venta</th>
+                                <th>Fecha</th>
+                                <th>Cliente</th>
+                                <th class="text-end">Total</th>
+                                <th class="text-center" style="width: 150px;">Acciones</th>
                             </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
-            <div class="modal-footer">
-                <h4>Total: @ventaSeleccionada.Total.ToString("C")</h4>
-                <button type="button" class="btn btn-secondary" @onclick="CerrarDetalle">Cerrar</button>
-            </div>
-        }
-        else
-        {
-            <div class="modal-body text-center py-5">
-                <div class="spinner-border text-primary" role="status"></div>
-                 <p class="mt-2">Cargando detalles...</p>
-            </div>
-        }
+                        </thead>
+                        <tbody>
+                            @foreach (var v in ventas)
+                            {
+                                <tr>
+                                    <td class="ps-3">
+                                        <span class="badge bg-light text-dark border">
+                                            #@v.VentaId
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <i class="bi bi-clock me-1 text-muted"></i>
+                                        @v.FechaVenta.LocalDateTime.ToString("g")
+                                    </td>
+                                    <td>
+                                        <span class="fw-bold text-secondary">
+                                            @(v.Cliente?.Nombre ?? "Público General")
+                                        </span>
+                                    </td>
+                                    <td class="text-end fw-bold text-success">@v.Total.ToString("C")</td>
+                                    <td class="text-center">
+                                        <button class="btn btn-sm btn-outline-primary shadow-sm" @onclick="() => VerDetalle(v.VentaId)" title="Ver Detalle">
+                                            <i class="bi bi-eye me-1"></i>Ver
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div class="card-footer bg-light py-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="text-muted small">
+                            Mostrando @ventas.Count registros encontrados.
+                        </div>
+                        <div class="fs-5 fw-bold text-primary">
+                            Total Periodo: <span class="text-success">@ventas.Sum(v => v.Total).ToString("C")</span>
+                        </div>
+                    </div>
+                </div>
+            }
         </div>
     </div>
 </div>
 
+<div class="modal fade" id="detalleVentaModal" tabindex="-1" aria-labelledby="detalleVentaModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            @if (ventaSeleccionada != null)
+            {
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">
+                        <i class="bi bi-receipt me-2"></i>Detalle de Venta #@ventaSeleccionada.VentaId
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="CerrarDetalle" aria-label="Close"></button>
+                </div>
+                
+                <div class="modal-body">
+                    <div class="row mb-4 bg-light rounded p-3 mx-1 border">
+                        <div class="col-md-6">
+                            <label class="small text-muted text-uppercase fw-bold">Cliente</label>
+                            <div class="fs-6 fw-bold text-dark">@(ventaSeleccionada.Cliente?.Nombre ?? "Público General")</div>
+                        </div>
+                        <div class="col-md-6 text-md-end">
+                            <label class="small text-muted text-uppercase fw-bold">Atendido por</label>
+                            <div class="fs-6">
+                                <i class="bi bi-person-badge me-1"></i>@(ventaSeleccionada.Empleado?.Nombre ?? "N/A")
+                            </div>
+                        </div>
+                        <div class="col-12 mt-2 border-top pt-2 d-flex justify-content-between">
+                             <span><i class="bi bi-calendar3 me-1"></i>@ventaSeleccionada.FechaVenta.LocalDateTime.ToString("f")</span>
+                             <span class="badge bg-info text-dark">
+                                 @(ventaSeleccionada.AplicarIVA == true ? "IVA Incluido (16%)" : "Sin desglose fiscal")
+                             </span>
+                        </div>
+                    </div>
+
+                    <h6 class="text-secondary border-bottom pb-2 mb-3">Productos Vendidos</h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Producto</th>
+                                    <th class="text-center">Cant.</th>
+                                    <th class="text-end">P. Unit.</th>
+                                    <th class="text-end">Desc.</th>
+                                    <th class="text-end">Subtotal</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var det in ventaSeleccionada.DetalleVentas)
+                                {
+                                    <tr>
+                                        <td class="fw-bold text-secondary">@det.Producto.Nombre</td>
+                                        <td class="text-center">@det.Cantidad</td>
+                                        <td class="text-end">@det.PrecioUnitario.ToString("C")</td>
+                                        <td class="text-end text-danger">
+                                            @if(det.Descuento > 0) { <small>-@det.Descuento.ToString("C")</small> } else { <span>-</span> }
+                                        </td>
+                                        <td class="text-end fw-bold">@((det.Cantidad * det.PrecioUnitario - det.Descuento).ToString("C"))</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div class="row justify-content-end mt-3">
+                        <div class="col-md-5">
+                            <ul class="list-group">
+                                @if (ventaSeleccionada.AplicarIVA == true)
+                                {
+                                    <li class="list-group-item d-flex justify-content-between align-items-center px-2 py-1 border-0">
+                                        <span class="small text-muted">Subtotal:</span>
+                                        <span>@((ventaSeleccionada.Total / 1.16m).ToString("C"))</span>
+                                    </li>
+                                    <li class="list-group-item d-flex justify-content-between align-items-center px-2 py-1 border-0">
+                                        <span class="small text-muted">IVA (16%):</span>
+                                        <span>@((ventaSeleccionada.Total - (ventaSeleccionada.Total / 1.16m)).ToString("C"))</span>
+                                    </li>
+                                }
+                                <li class="list-group-item d-flex justify-content-between align-items-center bg-light border rounded mt-1">
+                                    <span class="fw-bold text-primary">TOTAL PAGADO</span>
+                                    <span class="fw-bold fs-5 text-success">@ventaSeleccionada.Total.ToString("C")</span>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary" @onclick="CerrarDetalle">Cerrar</button>
+                    <button type="button" class="btn btn-primary" onclick="window.print()">
+                        <i class="bi bi-printer me-2"></i>Imprimir
+                    </button>
+                </div>
+            }
+            else
+            {
+                <div class="modal-body text-center py-5">
+                    <div class="spinner-border text-primary" role="status"></div>
+                    <p class="mt-2 text-muted">Cargando detalles...</p>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<style>
+    @@media print {
+        body {
+            visibility: hidden;
+        }
+
+        .container-fluid, .sidebar, .top-row {
+            display: none !important; 
+        }
+
+        #detalleVentaModal {
+            visibility: visible !important;
+            position: absolute !important;
+            left: 0 !important;
+            top: 0 !important;
+            width: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            
+            display: block !important; 
+            overflow: visible !important;
+        }
+
+        #detalleVentaModal * {
+            visibility: visible !important;
+        }
+
+        .modal-backdrop {
+            display: none !important;
+        }
+        
+        .modal-content {
+            border: none !important;
+            box-shadow: none !important;
+        }
+
+        .modal-header .btn-close, 
+        .modal-footer {
+            display: none !important;
+        }
+        
+        .modal-header {
+            border-bottom: 1px solid #000 !important;
+        }
+        
+        .modal-body {
+            background-color: white !important;
+            color: black !important;
+        }
+    }
+</style>
 
 @code {
     private List<Venta>? ventas;
@@ -150,7 +287,7 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-         if (AuthService.EmpleadoActual == null)
+        if (AuthService.EmpleadoActual == null)
         {
             NavManager.NavigateTo("/login");
             return;
@@ -162,6 +299,7 @@ else
             return;
         }
     }
+
     private async Task CargarReporte()
     {
         var fechaInicioUtc = fechaInicio.Date.ToUniversalTime();
@@ -169,7 +307,7 @@ else
 
         using var db = DbFactory.CreateDbContext();
         ventas = await db.Ventas
-            .Include(v => v.Cliente) // Cargar el nombre del cliente
+            .Include(v => v.Cliente)
             .Where(v => v.FechaVenta >= fechaInicioUtc && v.FechaVenta <= fechaFinUtc)
             .OrderByDescending(v => v.FechaVenta)
             .AsNoTracking()
@@ -184,9 +322,9 @@ else
         using var db = DbFactory.CreateDbContext();
         ventaSeleccionada = await db.Ventas
             .Include(v => v.Cliente)
-            .Include(v => v.DetalleVentas) // Cargar los detalles
-                .ThenInclude(d => d.Producto) // Cargar el nombre del producto en el detalle
-            .Include(v => v.Empleado) // Cargar el empleado que realizó la venta
+            .Include(v => v.DetalleVentas)
+                .ThenInclude(d => d.Producto)
+            .Include(v => v.Empleado)
             .AsNoTracking()
             .FirstOrDefaultAsync(v => v.VentaId == ventaId);
     }
