@@ -2,6 +2,7 @@
 @rendermode InteractiveServer
 @using Microsoft.EntityFrameworkCore
 @using PuntoDeVenta.Data
+@using System.Threading.Tasks
 @inject IDbContextFactory<ApplicationDbContext> DbFactory
 @inject IJSRuntime JSRuntime
 @inject NavigationManager NavManager
@@ -12,14 +13,14 @@
 
 <div class="container-fluid pt-3">
     
-    <h3 class="mb-3 text-primary">Terminal de Venta</h3>
+    <h3 class="mb-3 text-primary"> <i class="bi bi-cart-fill"></i> Terminal de Venta</h3>
     
     <div class="row">
         
         <div class="col-lg-7">
             
-            <div class="card mb-3 shadow-sm border-info">
-                <div class="card-header bg-info text-white fw-bold">
+            <div class="card mb-3 shadow-sm border-dark">
+                <div class="card-header bg-secondary text-white fw-bold">
                     <i class="bi bi-search me-2"></i> Búsqueda Rápida de Producto
                 </div>
                 <div class="card-body p-3 position-relative">
@@ -215,7 +216,7 @@
 
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-secondary btn-lg" data-bs-dismiss="modal">Cancelar</button>
                 <button type="button" class="btn btn-success btn-lg" 
                         @onclick="ConfirmarPago" 
                         disabled="@(montoRecibido < total)">
@@ -316,7 +317,7 @@
                 Descuento = 0m
             });
         }
-        
+
         terminoBusqueda = "";
         resultadosBusqueda.Clear();
     }
@@ -341,6 +342,8 @@
         montoRecibido = total; // Valor por defecto
         tipoPago = "Efectivo";
 
+        StateHasChanged();
+
         await JSRuntime.InvokeVoidAsync("bootstrapModalFunctions.show", "paymentModal");
     }
 
@@ -360,7 +363,7 @@
             var productosEnDb = await db.Productos
                 .Where(p => productoIds.Contains(p.ProductoId))
                 .ToDictionaryAsync(p => p.ProductoId);
-            
+
             ventaActual.FechaVenta = DateTime.UtcNow;
             ventaActual.Total = total;
             ventaActual.ClienteId = ventaActual.ClienteId == 0 ? null : ventaActual.ClienteId;
@@ -411,9 +414,9 @@
         }
     }
     [JSInvokable]
-    public void HandleF12Shortcut(){
+    public async Task HandleF12Shortcut(){
         if (carrito.Any()){
-            InvokeAsync(MostrarModalPago);
+            await MostrarModalPago();
         }
         else{
             _ = Notifier.SetMessage("Aún no hay productos en el carrito.", "error");

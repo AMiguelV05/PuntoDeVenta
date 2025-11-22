@@ -11,7 +11,7 @@
 <PageTitle>Entrada de Mercancía</PageTitle>
 
 <div class="container-fluid pt-3">
-    <h3 class="mb-3 text-primary"><i class="bi bi-box-seam-fill me-2"></i>Recepción de Mercancía</h3>
+    <h3 class="mb-3 text-primary"><i class="bi bi bi-cart-plus-fill me-2"></i>Recepción de Mercancía</h3>
 
     <div class="row">
         <div class="col-lg-8">
@@ -90,7 +90,7 @@
 
         <div class="col-lg-4">
             <div class="card shadow-lg">
-                <div class="card-header bg-primary text-white fw-bold">
+                <div class="card-header bg-success text-white fw-bold">
                     <i class="bi bi-file-earmark-text me-2"></i> Datos de la Entrada
                 </div>
                 <div class="card-body">
@@ -132,7 +132,17 @@
 
     protected override async Task OnInitializedAsync()
     {
-        if (AuthService.EmpleadoActual == null) { NavManager.NavigateTo("/login"); return; }
+        if (AuthService.EmpleadoActual == null)
+        {
+            NavManager.NavigateTo("/login");
+            return;
+        }
+        if (AuthService.EmpleadoActual.Puesto == "en espera")
+        {
+            _ = Notifier.SetMessage("Acceso no autorizado. Por favor, espera a que un Admin te conceda el acceso.", "warning", 3000);
+            NavManager.NavigateTo("/");
+            return;
+        }
         using var db = DbFactory.CreateDbContext();
         listaProveedores = await db.Proveedores.AsNoTracking().OrderBy(p => p.Nombre).ToListAsync();
     }

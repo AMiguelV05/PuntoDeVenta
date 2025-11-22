@@ -6,69 +6,91 @@
 <div class="container mt-4">
     <div class="row mb-4">
         <div class="col-12 text-center">
-            <h1>Bienvenido a tu Punto de Venta</h1>
+            <h1>Bienvenido a Komercia</h1>
+            <h4>Impulsando tu comercio, simplificando tus ventas.</h4>
             <p class="lead">Selecciona una tarea para comenzar.</p>
         </div>
     </div>
 
     <div class="row g-4">
         <div class="col-md-6 col-lg-4">
-            <div class="card h-100 shadow-sm">
+            <div class="card h-100 shadow-sm border-success">
                 <div class="card-body text-center d-flex flex-column">
-                    <i class="bi bi-cart-fill" style="font-size: 3rem; color: var(--bs-success);"></i>
-                    <h5 class="card-title mt-3">Caja</h5>
-                    <p class="card-text">Ir a la terminal principal para registrar nuevas ventas.</p>
-                    <a href="/venta" class="btn btn-success mt-auto">Iniciar Venta</a>
+                    <i class="bi bi-cart-fill text-success" style="font-size: 3rem;"></i>
+                    <h5 class="card-title mt-3">Caja / Terminal</h5>
+                    <p class="card-text">Registrar nuevas ventas y cobrar a clientes.</p>
+                    <a href="/venta" class="btn btn-outline-success mt-auto stretched-link">Iniciar Venta</a>
                 </div>
             </div>
         </div>
 
         <div class="col-md-6 col-lg-4">
-            <div class="card h-100 shadow-sm">
+            <div class="card h-100 shadow-sm border-warning">
                 <div class="card-body text-center d-flex flex-column">
-                    <i class="bi bi-box-seam-fill" style="font-size: 3rem; color: var(--bs-primary);"></i>
+                    <i class="bi bi-box-arrow-in-down text-warning" style="font-size: 3rem;"></i>
+                    <h5 class="card-title mt-3">Entrada de Mercancía</h5>
+                    <p class="card-text">Reabastecer inventario y registrar compras a proveedores.</p>
+                    <a href="/entrada-mercancia" class="btn btn-outline-warning mt-auto stretched-link">Recibir Mercancía</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100 shadow-sm border-primary">
+                <div class="card-body text-center d-flex flex-column">
+                    <i class="bi bi-box-seam-fill text-primary" style="font-size: 3rem;"></i>
                     <h5 class="card-title mt-3">Productos</h5>
-                    <p class="card-text">Administrar el inventario, precios y stock de productos.</p>
-                    <a href="/productos" class="btn btn-primary mt-auto">Gestionar Productos</a>
+                    <p class="card-text">Administrar el catálogo, precios y editar stock manualmente.</p>
+                    <a href="/productos" class="btn btn-outline-primary mt-auto stretched-link">Gestionar Productos</a>
                 </div>
             </div>
         </div>
 
         <div class="col-md-6 col-lg-4">
-            <div class="card h-100 shadow-sm">
+            <div class="card h-100 shadow-sm border-dark">
                 <div class="card-body text-center d-flex flex-column">
-                    <i class="bi bi-bar-chart-line-fill" style="font-size: 3rem; color: var(--bs-info);"></i>
+                    <i class="bi bi-truck text-dark" style="font-size: 3rem;"></i>
+                    <h5 class="card-title mt-3">Proveedores</h5>
+                    <p class="card-text">Administrar la lista de proveedores y contactos.</p>
+                    <a href="/proveedores" class="btn btn-outline-dark mt-auto stretched-link">Ver Proveedores</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100 shadow-sm border-info">
+                <div class="card-body text-center d-flex flex-column">
+                    <i class="bi bi-bar-chart-line-fill text-info" style="font-size: 3rem;"></i>
                     <h5 class="card-title mt-3">Reportes</h5>
-                    <p class="card-text">Ver el historial de ventas, filtrar por fechas y consultar detalles.</p>
-                    <a href="/reportes/ventas" class="btn btn-info mt-auto">Ver Reportes</a>
+                    <p class="card-text">Consulta el historial de ventas y reportes de entradas de almacén.</p>
+                    <div class="mt-auto btn-group w-100">
+                        <a href="/reportes/ventas" class="btn btn-outline-info">Ventas</a>
+                        <a href="/reportes/entradas" class="btn btn-outline-info">Entradas</a>
+                    </div>
                 </div>
             </div>
         </div>
 
         <div class="col-md-6 col-lg-4">
-            <div class="card h-100 shadow-sm">
+            <div class="card h-100 shadow-sm border-secondary">
                 <div class="card-body text-center d-flex flex-column">
-                    <i class="bi bi-people-fill" style="font-size: 3rem; color: var(--bs-warning);"></i>
+                    <i class="bi bi-people-fill text-secondary" style="font-size: 3rem;"></i>
                     <h5 class="card-title mt-3">Clientes</h5>
                     <p class="card-text">Administrar la base de datos de tus clientes registrados.</p>
-                    <a href="/clientes" class="btn btn-warning mt-auto">Gestionar Clientes</a>
+                    <a href="/clientes" class="btn btn-outline-secondary mt-auto stretched-link">Gestionar Clientes</a>
                 </div>
             </div>
         </div>
-
-        <div class="col-md-6 col-lg-4">
-            <div class="card h-100 shadow-sm">
+        
+        <div class="col-md-12 col-lg-4">
+            <div class="card h-100 shadow-sm border-danger">
                 <div class="card-body text-center d-flex flex-column">
-                    <i class="bi bi-tags-fill" style="font-size: 3rem; color: var(--bs-secondary);"></i>
+                    <i class="bi bi-tags-fill text-danger" style="font-size: 3rem;"></i>
                     <h5 class="card-title mt-3">Categorías</h5>
-                    <p class="card-text">Organizar tus productos en diferentes categorías.</p>
-                    <a href="/categorias" class="btn btn-secondary mt-auto">Gestionar Categorías</a>
+                    <p class="card-text">Organizar tus productos en diferentes familias.</p>
+                    <a href="/categorias" class="btn btn-outline-danger mt-auto stretched-link">Gestionar Categorías</a>
                 </div>
             </div>
         </div>
     </div>
 </div>
-
-@code {
-    // Esta página es puramente visual, no necesita lógica de C# por ahora.
-}

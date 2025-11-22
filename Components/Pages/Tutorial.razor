@@ -2,86 +2,130 @@
 @rendermode InteractiveServer
 @using PuntoDeVenta.Services
 @inject EstadoAutenticacionService AuthService
-@inject NavigationManager NavManager
 @inject NotificationService Notifier
+@inject NavigationManager NavManager
 
 <PageTitle>Tutorial del POS</PageTitle>
 
-<div class="row justify-content-center">
-    <div class="col-md-10 col-lg-8">
-        <h3 class="mb-3">Guía Rápida: Cómo Usar la Terminal de Venta</h3>
-        <p>¡Bienvenido! Sigue estos pasos para completar una venta con éxito.</p>
+<div class="container pt-3">
+    <div class="row justify-content-center">
+        <div class="col-md-10 col-lg-9">
+            <h3 class="mb-4 text-center"><i class="bi bi-book-half me-2"></i>Centro de Ayuda y Tutoriales</h3>
 
-        <div class="accordion" id="tutorialAccordion">
-
-            <!-- Paso 1: Iniciar Sesión -->
-            <div class="accordion-item">
-                <h2 class="accordion-header">
-                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseUno">
-                        <i class="bi bi-box-arrow-in-right me-2"></i> <strong>Paso 1:</strong> Iniciar Sesión y Acceder
+            <ul class="nav nav-tabs mb-3" id="tutorialTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="ventas-tab" data-bs-toggle="tab" data-bs-target="#ventas-content" type="button" role="tab">
+                        <i class="bi bi-cart-check me-2"></i>Cómo Vender
                     </button>
-                </h2>
-                <div id="collapseUno" class="accordion-collapse collapse" data-bs-parent="#tutorialAccordion">
-                    <div class="accordion-body">
-                        <p>Cuando te registras por primera vez, tu cuenta tiene el estado <strong>"en espera"</strong>. <i>(Podrás ver el estado actual de tu cuenta, arriba a la izquierda, debajo de tu nombre.)</i></p>
-                        <p>Un <strong>Administrador</strong> debe ir a "Gestión de Empleados" y cambiar tu puesto a "Vendedor" o "Administrador" para que puedas acceder a la terminal. Si ya puedes ver el enlace "Terminal Venta" en el menú, ¡tu cuenta ya fue aprobada!</p>
-                        <p>Si tu cuenta ya fue aprobada, ¡ignora este paso!</p>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="inventario-tab" data-bs-toggle="tab" data-bs-target="#inventario-content" type="button" role="tab">
+                        <i class="bi bi-box-seam me-2"></i>Inventario y Compras
+                    </button>
+                </li>
+            </ul>
+
+            <div class="tab-content shadow-sm p-4 bg-white rounded border" id="tutorialTabContent">
+                
+                <div class="tab-pane fade show active" id="ventas-content" role="tabpanel">
+                    <h4 class="text-success mb-3">Flujo de Venta en Caja</h4>
+                    <div class="accordion" id="accordionVentas">
+                        
+                        <div class="accordion-item">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#v-paso1">
+                                    <i class="bi bi-search me-2"></i> <strong>Paso 1: Buscar Producto</strong>
+                                </button>
+                            </h2>
+                            <div id="v-paso1" class="accordion-collapse collapse show" data-bs-parent="#accordionVentas">
+                                <div class="accordion-body">
+                                    Ve a <strong>"Caja / Terminal"</strong>. Usa la barra superior para escanear un código de barras o escribir el nombre del producto (ej: "Coca Cola").
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="accordion-item">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#v-paso2">
+                                    <i class="bi bi-cart-plus me-2"></i> <strong>Paso 2: Agregar al Carrito</strong>
+                                </button>
+                            </h2>
+                            <div id="v-paso2" class="accordion-collapse collapse" data-bs-parent="#accordionVentas">
+                                <div class="accordion-body">
+                                    Haz clic en el botón verde <strong>"Agregar"</strong>. Si necesitas más de una unidad, modifica la casilla de "Cantidad" directamente en la tabla del carrito.
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="accordion-item">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#v-paso3">
+                                    <i class="bi bi-cash-coin me-2"></i> <strong>Paso 3: Finalizar y Cobrar</strong>
+                                </button>
+                            </h2>
+                            <div id="v-paso3" class="accordion-collapse collapse" data-bs-parent="#accordionVentas">
+                                <div class="accordion-body">
+                                    <ol>
+                                        <li>(Opcional) Selecciona un <strong>Cliente</strong> del menú desplegable si deseas registrar la venta a su nombre.</li>
+                                        <li>Presiona <strong>"Cobrar y Finalizar"</strong> (o la tecla F12).</li>
+                                        <li>Ingresa el monto con el que paga el cliente para calcular el cambio.</li>
+                                        <li>Confirma para guardar la venta y descontar el stock.</li>
+                                    </ol>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
-            </div>
 
-            <!-- Paso 2: Buscar Productos -->
-            <div class="accordion-item">
-                <h2 class="accordion-header">
-                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseDos">
-                        <i class="bi bi-search me-2"></i> <strong>Paso 2:</strong> Buscar el Producto
-                    </button>
-                </h2>
-                <div id="collapseDos" class="accordion-collapse collapse" data-bs-parent="#tutorialAccordion">
-                    <div class="accordion-body">
-                        <p>Ve a la página <strong>"Terminal Venta"</strong>.</p>
-                        <p>Usa la barra de <strong>"Buscar Producto"</strong> en la parte superior. Puedes escribir el nombre del producto (ej: "Coca Cola") o su código (SKU).</p>
-                        <p>El sistema te mostrará una lista de resultados debajo de la barra de búsqueda. Verás el nombre, el stock disponible y el precio.</p>
+                <div class="tab-pane fade" id="inventario-content" role="tabpanel">
+                    <h4 class="text-warning mb-3">Recepción de Mercancía (Resurtido)</h4>
+                    <p class="text-muted">Usa este módulo cuando lleguen camiones de proveedores o compres nuevo stock.</p>
+                    
+                    <div class="accordion" id="accordionInventario">
+                        
+                        <div class="accordion-item">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#i-paso1">
+                                    <i class="bi bi-truck me-2"></i> <strong>Paso 1: Proveedores</strong>
+                                </button>
+                            </h2>
+                            <div id="i-paso1" class="accordion-collapse collapse show" data-bs-parent="#accordionInventario">
+                                <div class="accordion-body">
+                                    Antes de registrar una entrada, asegúrate de que el proveedor exista en el sistema.
+                                    Ve a la sección <strong>Proveedores</strong> y crea uno nuevo si es necesario. <br/>
+                                    <em>Nota: Es obligatorio asignar un proveedor a cada entrada de mercancía.</em>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="accordion-item">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#i-paso2">
+                                    <i class="bi bi-box-arrow-in-down me-2"></i> <strong>Paso 2: Registrar Entrada</strong>
+                                </button>
+                            </h2>
+                            <div id="i-paso2" class="accordion-collapse collapse" data-bs-parent="#accordionInventario">
+                                <div class="accordion-body">
+                                    <ol>
+                                        <li>Ve a <strong>"Entrada de Mercancía"</strong>.</li>
+                                        <li>Busca los productos que están llegando y agrégalos a la lista.</li>
+                                        <li>Edita el <strong>Costo Unitario</strong> si el precio de compra ha cambiado (esto actualizará el costo en el sistema).</li>
+                                        <li>Selecciona el Proveedor en el menú derecho.</li>
+                                        <li>Haz clic en <strong>"Registrar Entrada"</strong>. El stock se sumará automáticamente al actual.</li>
+                                    </ol>
+                                </div>
+                            </div>
+                        </div>
+
                     </div>
                 </div>
-            </div>
 
-            <!-- Paso 3: Agregar al Carrito -->
-            <div class="accordion-item">
-                <h2 class="accordion-header">
-                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTres">
-                        <i class="bi bi-cart-plus-fill me-2"></i> <strong>Paso 3:</strong> Armar el Carrito
-                    </button>
-                </h2>
-                <div id="collapseTres" class="accordion-collapse collapse" data-bs-parent="#tutorialAccordion">
-                    <div class="accordion-body">
-                        <p><strong>Para Agregar:</strong> Haz clic en el botón verde <strong>"Agregar"</strong> al lado del producto que encontraste en la búsqueda.</p>
-                        <p><strong>Ajustar Cantidad:</strong> El producto aparecerá en la tabla "Carrito Actual". Puedes cambiar el número en la casilla <strong>"Cantidad"</strong> si el cliente lleva más de uno. <i>(Sientete libre de unsar las flechas para aumentar/disminuir de uno en uno o escribir directamente la cantidad con el teclado)</i></p>
-                        <p><strong>Quitar un Producto:</strong> Si te equivocaste o el cliente ya no lo quiere, presiona el botón rojo <strong>"Quitar"</strong>.</p>
-                    </div>
-                </div>
             </div>
-
-            <!-- Paso 4: Finalizar la Venta -->
-            <div class="accordion-item">
-                <h2 class="accordion-header">
-                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseCuatro">
-                        <i class="bi bi-cash-coin me-2"></i> <strong>Paso 4:</strong> Cobrar y Finalizar
-                    </button>
-                </h2>
-                <div id="collapseCuatro" class="accordion-collapse collapse" data-bs-parent="#tutorialAccordion">
-                    <div class="accordion-body">
-                        <p>En el panel de la derecha ("Resumen de Venta"), verás el total a pagar (Subtotal + IVA).</p>
-                        <ol>
-                            <li><strong>Asignar Cliente (Opcional):</strong> Si es un cliente frecuente que ya está registrado, puedes seleccionarlo en el menú desplegable "Cliente:". Si no, simplemente déjalo como <strong>"(Público General)"</strong>.</li>
-                            <li><strong>Cobrar:</strong> Verifica el monto <strong>Total</strong> con el cliente y procede al cobro.</li>
-                            <li><strong>Finalizar:</strong> Presiona el botón verde grande <strong>"Cobrar y Finalizar Venta"</strong>.</li>
-                        </ol>
-                        <p class="mt-2">¡Y listo! El sistema guardará la venta, descontará los productos del inventario (stock) y limpiará la pantalla para la siguiente venta.</p>
-                    </div>
-                </div>
+            
+            <div class="mt-4 alert alert-info text-center">
+                <i class="bi bi-info-circle-fill me-2"></i>
+                Recuerda que para acceder a estas funciones tu cuenta debe tener permisos de <strong>Vendedor</strong> o <strong>Administrador</strong>.
             </div>
-
         </div>
     </div>
 </div>
@@ -89,7 +133,6 @@
 @code {
     protected override void OnInitialized()
     {
-        // Seguridad: Asegurarse de que el empleado esté logueado y aprobado
         if (AuthService.EmpleadoActual == null)
         {
             NavManager.NavigateTo("/login");

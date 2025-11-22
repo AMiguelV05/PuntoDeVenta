@@ -6,7 +6,7 @@
 
 <div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
-        <a class="navbar-brand" href="">PuntoDeVenta</a>
+        <a class="navbar-brand" href="">Komercia</a>
     </div>
 </div>
 
@@ -68,6 +68,12 @@
                 </div>
 
                 <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="reportes/ventas">
+                        <i class="bi bi-bar-chart-fill" aria-hidden="true"></i> Reporte Ventas
+                    </NavLink>
+                </div>
+
+                <div class="nav-item px-3">
                     <NavLink class="nav-link" href="productos">
                         <i class="bi bi-box-seam-fill" aria-hidden="true"></i> Gestión Productos
                     </NavLink>
@@ -76,6 +82,12 @@
                 <div class="nav-item px-3">
                     <NavLink class="nav-link" href="entrada-mercancia">
                         <i class="bi bi-cart-plus-fill" aria-hidden="true"></i> Registro Entradas
+                    </NavLink>
+                </div>
+
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="reportes/entradas">
+                        <i class="bi bi-clipboard-data-fill" aria-hidden="true"></i> Reporte Entradas
                     </NavLink>
                 </div>
 
@@ -97,11 +109,6 @@
                     </NavLink>
                 </div>
 
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="reportes/ventas">
-                        <i class="bi bi-bar-chart-fill" aria-hidden="true"></i> Reporte Ventas
-                    </NavLink>
-                </div>
             }
 
             @if(AuthService.EsAdmin)
