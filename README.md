@@ -47,7 +47,7 @@ Sigue estos pasos para ejecutar el proyecto en tu entorno local:
 ```bash
 git clone [https://github.com/AMiguelV05/PuntoDeVenta.git](https://github.com/AMiguelV05/PuntoDeVenta.git)
 cd PuntoDeVenta
-
+```
 ### 2. Configurar la Base de Datos
 **Asegurate de tener PostgreSQL 18 instalado y corriendo**
 * **Crea** una base de datos llamada punto_venta.
@@ -56,10 +56,11 @@ cd PuntoDeVenta
 * **Ejecuta** las migraciones.
 ```bash
 dotnet ef database update
-
+```
 * **Ejecuta** la aplicación.
 ```bash
 dotnet run
 # o
 dotnet watch
+```
 ---
