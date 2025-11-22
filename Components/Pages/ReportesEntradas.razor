@@ -1,0 +1,240 @@
+@page "/reportes/entradas"
+@rendermode InteractiveServer
+@using Microsoft.EntityFrameworkCore
+@using PuntoDeVenta.Data
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
+@inject IJSRuntime JSRuntime
+
+<PageTitle>Reporte de Entradas</PageTitle>
+
+<div class="container-fluid pt-3">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h3 class="text-primary m-0">
+            <i class="bi bi-truck me-2"></i>Reporte de Entradas
+        </h3>
+    </div>
+
+    <div class="card shadow-lg border-0 mb-4">
+        <div class="card-header bg-white py-3">
+            <div class="row g-3 align-items-center">
+                <div class="col-md-4 col-lg-3">
+                    <div class="input-group">
+                        <span class="input-group-text bg-light text-primary border-end-0"><i class="bi bi-calendar-event"></i></span>
+                        <InputDate @bind-Value="fechaInicio" class="form-control border-start-0" />
+                    </div>
+                </div>
+                <div class="col-auto text-muted"><i class="bi bi-arrow-right"></i></div>
+                <div class="col-md-4 col-lg-3">
+                    <div class="input-group">
+                        <span class="input-group-text bg-light text-primary border-end-0"><i class="bi bi-calendar-check"></i></span>
+                        <InputDate @bind-Value="fechaFin" class="form-control border-start-0" />
+                    </div>
+                </div>
+                <div class="col-auto">
+                    <button class="btn btn-success shadow-sm" @onclick="CargarReporte">
+                        <i class="bi bi-search me-2"></i>Generar
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="card-body p-0">
+            @if (entradas == null)
+            {
+                <div class="p-5 text-center text-muted">
+                    <i class="bi bi-calendar-range display-4 d-block mb-2"></i>
+                    <p class="fs-5">Selecciona un rango de fechas para comenzar.</p>
+                </div>
+            }
+            else if (!entradas.Any())
+            {
+                <div class="p-5 text-center text-muted">
+                    <i class="bi bi-inbox display-4 d-block mb-2"></i>
+                    <p>No se encontraron entradas en el rango seleccionado.</p>
+                </div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover table-striped align-middle mb-0">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Folio</th>
+                                <th>Fecha</th>
+                                <th>Proveedor</th>
+                                <th>Recibido Por</th>
+                                <th class="text-end">Total Compra</th>
+                                <th class="text-center">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var e in entradas)
+                            {
+                                var totalEntrada = e.Detalles.Sum(d => d.Cantidad * d.CostoUnitario);
+                                <tr>
+                                    <td class="ps-3"><span class="badge bg-light text-dark border">#@e.EntradaId</span></td>
+                                    <td>@e.Fecha.LocalDateTime.ToString("g")</td>
+                                    <td><span class="fw-bold text-secondary">@e.Proveedor?.Nombre</span></td>
+                                    <td class="small text-muted">@e.Empleado?.Nombre</td>
+                                    <td class="text-end fw-bold text-danger">@totalEntrada.ToString("C")</td>
+                                    <td class="text-center">
+                                        <button class="btn btn-sm btn-outline-primary" @onclick="() => VerDetalle(e.EntradaId)">
+                                            <i class="bi bi-eye"></i> Ver
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                <div class="card-footer bg-light py-3">
+                     <div class="text-end fs-5 fw-bold text-primary">
+                        Total Gastado en Periodo: <span class="text-danger">@totalPeriodo.ToString("C")</span>
+                     </div>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="detalleEntradaModal" tabindex="-1" arial-labelledby="detalleEntradaModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            @if (entradaSeleccionada != null)
+            {
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">
+                        <i class="bi bi-receipt me-2"></i>Detalle de Entrada #@entradaSeleccionada.EntradaId
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="CerrarDetalle" aria-label="Close"></button>
+                </div>
+
+                <div class="modal-body">
+                    <div class="row mb-4 bg-light rounded p-3 mx-1 border">
+                        <div class="col-md-6">
+                            <label class="small text-muted text-uppercase fw-bold">Proveedor</label>
+                            <div class="fs-6 fw-bold text-dark">
+                                @(entradaSeleccionada.Proveedor?.Nombre ?? "Proveedor Desconocido")
+                            </div>
+                            <small class="text-muted">RFC: @(entradaSeleccionada.Proveedor?.Rfc ?? "N/A")</small>
+                        </div>
+                        <div class="col-md-6 text-md-end">
+                            <label class="small text-muted text-uppercase fw-bold">Recibido por</label>
+                            <div class="fs-6">
+                                <i class="bi bi-person-badge me-1"></i>
+                                @(entradaSeleccionada.Empleado?.Nombre ?? "N/A")
+                            </div>
+                        </div>
+                        <div class="col-12 mt-2 border-top pt-2">
+                             <span><i class="bi bi-calendar3 me-1"></i>@entradaSeleccionada.Fecha.LocalDateTime.ToString("f")</span>
+                        </div>
+                    </div>
+
+                    <h6 class="text-secondary border-bottom pb-2 mb-3">Productos Recibidos</h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Producto</th>
+                                    <th class="text-center">Cant.</th>
+                                    <th class="text-end">Costo Unit.</th>
+                                    <th class="text-end">Subtotal</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var det in entradaSeleccionada.Detalles)
+                                {
+                                    <tr>
+                                        <td class="fw-bold text-secondary">
+                                            @(det.Producto?.Nombre ?? "Producto Eliminado")
+                                        </td>
+                                        <td class="text-center">@det.Cantidad</td>
+                                        <td class="text-end">@det.CostoUnitario.ToString("C")</td>
+                                        <td class="text-end fw-bold">
+                                            @((det.Cantidad * det.CostoUnitario).ToString("C"))
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div class="row justify-content-end mt-3">
+                        <div class="col-md-5">
+                            <ul class="list-group">
+                                <li class="list-group-item d-flex justify-content-between align-items-center bg-light border rounded mt-1">
+                                    <span class="fw-bold text-primary">TOTAL COMPRA</span>
+                                    <span class="fw-bold fs-5 text-success">
+                                        @entradaSeleccionada.Detalles.Sum(d => d.Cantidad * d.CostoUnitario).ToString("C")
+                                    </span>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary" @onclick="CerrarDetalle">Cerrar</button>
+                    <button type="button" class="btn btn-primary" onclick="window.print()">
+                        <i class="bi bi-printer me-2"></i>Imprimir
+                    </button>
+                </div>
+            }
+            else
+            {
+                <div class="modal-body text-center py-5">
+                    <div class="spinner-border text-primary" role="status"></div>
+                    <p class="mt-2 text-muted">Cargando información de la entrada...</p>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+@code {
+    private DateTime fechaInicio = DateTime.Today.AddDays(-30);
+    private DateTime fechaFin = DateTime.Today;
+    private List<Entrada>? entradas;
+    private Entrada? entradaSeleccionada;
+    private decimal totalPeriodo = 0;
+
+    private async Task CargarReporte()
+    {
+        var fInicio = fechaInicio.Date.ToUniversalTime();
+        var fFin = fechaFin.Date.AddDays(1).ToUniversalTime();
+
+        using var db = DbFactory.CreateDbContext();
+        
+        entradas = await db.Entradas
+            .Include(e => e.Proveedor)
+            .Include(e => e.Empleado)
+            .Include(e => e.Detalles) 
+            .Where(e => e.Fecha >= fInicio && e.Fecha <= fFin)
+            .OrderByDescending(e => e.Fecha)
+            .AsNoTracking()
+            .ToListAsync();
+
+        // Sumar total de todas las entradas cargadas
+        totalPeriodo = entradas.Sum(e => e.Detalles.Sum(d => d.Cantidad * d.CostoUnitario));
+    }
+
+    private async Task VerDetalle(long entradaId)
+    {
+        entradaSeleccionada = null;
+        await JSRuntime.InvokeVoidAsync("bootstrapModalFunctions.show", "detalleEntradaModal");
+
+        using var db = DbFactory.CreateDbContext();
+        entradaSeleccionada = await db.Entradas
+                        .Include(e => e.Proveedor)          // Trae datos del Proveedor (Nombre, RFC...)
+                        .Include(e => e.Detalles)           // Trae la lista de items
+                            .ThenInclude(d => d.Producto)   // Entra a cada item y trae el nombre del Producto
+                        .Include(e => e.Empleado)           // Trae quién recibió la mercancía
+                        .AsNoTracking()
+                        .FirstOrDefaultAsync(e => e.EntradaId == entradaId);
+    }
+
+    private async Task CerrarDetalle()
+    {
+        await JSRuntime.InvokeVoidAsync("bootstrapModalFunctions.hide", "detalleEntradaModal");
+        entradaSeleccionada = null;
+    }
+}
