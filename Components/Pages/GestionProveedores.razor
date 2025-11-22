@@ -1,0 +1,281 @@
+@page "/proveedores"
+@rendermode InteractiveServer
+@using Microsoft.EntityFrameworkCore
+@using PuntoDeVenta.Data
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
+@inject EstadoAutenticacionService AuthService
+@inject NavigationManager NavManager
+@inject NotificationService Notifier
+@inject IJSRuntime JSRuntime
+
+<PageTitle>Gestión de Proveedores</PageTitle>
+
+<div class="container-fluid pt-3">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h3 class="text-primary m-0"><i class="bi bi-truck me-2"></i>Directorio de Proveedores</h3>
+        <button class="btn btn-success shadow-sm" @onclick="IniciarNuevoProveedor">
+            <i class="bi bi-plus-lg me-2"></i>Nuevo Proveedor
+        </button>
+    </div>
+
+    <div class="card shadow-lg border-0">
+        <div class="card-header bg-white py-3">
+            <div class="input-group">
+                <span class="input-group-text bg-light text-primary border-end-0"><i class="bi bi-search"></i></span>
+                <input type="text" class="form-control border-start-0" placeholder="Buscar por nombre o RFC..." 
+                       @bind="terminoBusqueda" @oninput="AlEscribir" />
+                <button class="btn btn-outline-secondary" type="button" @onclick="LimpiarBusqueda"><i class="bi bi-x-lg"></i></button>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            @if (proveedores == null)
+            {
+                <div class="p-4 text-center"><div class="spinner-border text-primary"></div></div>
+            }
+            else if (!proveedores.Any())
+            {
+                <div class="p-4 text-center text-muted"><p>No se encontraron proveedores.</p></div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover table-striped align-middle mb-0">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Nombre / RFC</th>
+                                <th>Contacto</th>
+                                <th>Dirección</th>
+                                <th class="text-center" style="width: 150px;">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var prov in proveedores)
+                            {
+                                <tr>
+                                    <td>
+                                        <span class="fw-bold text-secondary">@prov.Nombre</span><br/>
+                                        <small class="text-muted"><i class="bi bi-card-heading me-1"></i>@prov.Rfc</small>
+                                    </td>
+                                    <td>
+                                        <i class="bi bi-telephone me-1"></i>@prov.Telefono<br/>
+                                        <i class="bi bi-envelope me-1"></i><small>@prov.Correo</small>
+                                    </td>
+                                    <td class="small">@prov.Direccion</td>
+                                    <td class="text-center">
+                                        <div class="btn-group shadow-sm">
+                                            <button class="btn btn-sm btn-outline-primary" @onclick="() => PrepararEdicion(prov)" title="Editar"><i class="bi bi-pencil-square"></i></button>
+                                            <button class="btn btn-sm btn-outline-danger" @onclick="() => SolicitarEliminacion(prov)" title="Eliminar"><i class="bi bi-trash"></i></button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="proveedorModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header @(editando ? "bg-warning" : "bg-success") text-white">
+                <h5 class="modal-title">@(editando ? "Editar Proveedor" : "Nuevo Proveedor")</h5>
+                <button type="button" class="btn-close btn-close-white" @onclick="CerrarModal"></button>
+            </div>
+            <EditForm Model="proveedorModel" OnValidSubmit="GuardarProveedor">
+                <DataAnnotationsValidator />
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Nombre / Razón Social:</label>
+                        <InputText @bind-Value="proveedorModel.Nombre" class="form-control" />
+                        <ValidationMessage For="@(() => proveedorModel.Nombre)" class="text-danger small" />
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">RFC:</label>
+                            <InputText @bind-Value="proveedorModel.Rfc" class="form-control" />
+                            <ValidationMessage For="@(() => proveedorModel.Rfc)" class="text-danger small" />
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">Teléfono:</label>
+                            <InputText @bind-Value="proveedorModel.Telefono" class="form-control" />
+                            <ValidationMessage For="@(() => proveedorModel.Telefono)" class="text-danger small" />
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Correo Electrónico:</label>
+                        <InputText @bind-Value="proveedorModel.Correo" class="form-control" />
+                        <ValidationMessage For="@(() => proveedorModel.Correo)" class="text-danger small" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Dirección:</label>
+                        <InputTextArea @bind-Value="proveedorModel.Direccion" class="form-control" rows="2" />
+                        <ValidationMessage For="@(() => proveedorModel.Direccion)" class="text-danger small" />
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary" @onclick="CerrarModal">Cancelar</button>
+                    <button type="submit" class="btn @(editando ? "btn-warning" : "btn-success")">Guardar</button>
+                </div>
+            </EditForm>
+        </div>
+    </div>
+</div>
+<div class="modal fade" id="confirmarEliminacionProvModal" tabindex="-1" aria-hidden="true" style="z-index: 1070;">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>Confirmar Eliminación
+                </h5>
+                <button type="button" class="btn-close btn-close-white" @onclick="CerrarModalEliminacion" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center p-4">
+                <div class="mb-3 text-danger">
+                    <i class="bi bi-trash3 display-1"></i>
+                </div>
+                <h5 class="mb-3">¿Estás seguro?</h5>
+                <p class="text-muted mb-0">
+                    Estás a punto de eliminar la categoría:
+                </p>
+                @if (proveedorAEliminar != null)
+                {
+                    <p class="fw-bold fs-5 text-dark mt-2">@proveedorAEliminar.Nombre</p>
+                }
+                <p class="text-muted small mt-3">
+                    Esta acción es irreversible. Asegúrate de que no haya productos dependiendo de esta categoría.
+                </p>
+            </div>
+            <div class="modal-footer bg-light justify-content-center">
+                <button type="button" class="btn btn-secondary px-4" @onclick="CerrarModalEliminacion">
+                    <i class="bi bi-x-lg me-2"></i>Cancelar
+                </button>
+                <button type="button" class="btn btn-danger px-4" @onclick="ConfirmarEliminacion">
+                    <i class="bi bi-trash-fill me-2"></i>Sí, Eliminar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private string terminoBusqueda = "";
+    private List<Proveedor> proveedores = new();
+    private Proveedor proveedorModel = new();
+    private bool editando = false;
+    private Proveedor? proveedorAEliminar;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!AuthService.EstaLogueado)
+        {
+            NavManager.NavigateTo("/login");
+            return;
+        }
+        if (!AuthService.EstaAprobado)
+        {
+            _ = Notifier.SetMessage("Acceso no autorizado. Por favor, espera a que un Admin te conceda el acceso.", "warning", 3000);
+            NavManager.NavigateTo("/");
+            return;
+        }
+        await CargarProveedores();
+    }
+
+    private async Task CargarProveedores()
+    {
+        using var db = DbFactory.CreateDbContext();
+        var query = db.Proveedores.AsNoTracking().AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(terminoBusqueda))
+        {
+            var t = terminoBusqueda.ToLower();
+            query = query.Where(p => p.Nombre.ToLower().Contains(t) || p.Rfc.ToLower().Contains(t));
+        }
+
+        proveedores = await query.OrderBy(p => p.Nombre).ToListAsync();
+    }
+
+    private async Task AlEscribir(ChangeEventArgs e)
+    {
+        terminoBusqueda = e.Value?.ToString() ?? "";
+        await CargarProveedores();
+    }
+    
+    private async Task LimpiarBusqueda()
+    {
+        terminoBusqueda = "";
+        await CargarProveedores();
+    }
+
+    private async Task IniciarNuevoProveedor()
+    {
+        proveedorModel = new();
+        editando = false;
+        await JSRuntime.InvokeVoidAsync("bootstrapModalFunctions.show", "proveedorModal");
+    }
+
+    private async Task PrepararEdicion(Proveedor p)
+    {
+        // Clonación manual simple para evitar editar la referencia de la lista directamente
+        proveedorModel = new Proveedor { 
+            ProveedorId = p.ProveedorId, Nombre = p.Nombre, Rfc = p.Rfc, 
+            Telefono = p.Telefono, Correo = p.Correo, Direccion = p.Direccion 
+        };
+        editando = true;
+        await JSRuntime.InvokeVoidAsync("bootstrapModalFunctions.show", "proveedorModal");
+    }
+
+    private async Task CerrarModal()
+    {
+        await JSRuntime.InvokeVoidAsync("bootstrapModalFunctions.hide", "proveedorModal");
+    }
+
+    private async Task GuardarProveedor()
+    {
+        using var db = DbFactory.CreateDbContext();
+        if (editando) db.Proveedores.Update(proveedorModel);
+        else await db.Proveedores.AddAsync(proveedorModel);
+
+        await db.SaveChangesAsync();
+        await CerrarModal();
+        await CargarProveedores();
+        _ = Notifier.SetMessage(editando ? "Proveedor actualizado." : "Proveedor creado.", "success");
+    }
+
+    private async Task SolicitarEliminacion(Proveedor proveedor)
+    {
+        proveedorAEliminar = proveedor;
+        await JSRuntime.InvokeVoidAsync("bootstrapModalFunctions.show", "confirmarEliminacionProvModal");
+    }
+    private async Task ConfirmarEliminacion()
+    {
+        if (proveedorAEliminar == null) return;
+
+        try
+        {
+            using var db = DbFactory.CreateDbContext();
+            var prov = await db.Proveedores.FindAsync(proveedorAEliminar.ProveedorId);
+            if (prov != null)
+            {
+                db.Proveedores.Remove(prov);
+                await db.SaveChangesAsync();
+                _ = Notifier.SetMessage($"Proveedor '{proveedorAEliminar.Nombre}' eliminado.", "success");
+                await CargarProveedores();
+            }
+        }
+        catch (Exception ex)
+        {
+            _ = Notifier.SetMessage($"Error al eliminar: {ex}", "error", 5000);
+        }
+        finally
+        {
+            await CerrarModalEliminacion();
+        }
+    }
+    private async Task CerrarModalEliminacion()
+    {
+        await JSRuntime.InvokeVoidAsync("bootstrapModalFunctions.hide", "confirmarEliminacionProvModal");
+    }
+}

@@ -247,10 +247,15 @@
                                             @prod.PrecioVenta.ToString("C") </td>
                                         <td class="text-center">
                                             @if (prod.StockActual > 0){
-                                                <span class="badge bg-success w-75">Disponible</span>
+                                                <span class="badge bg-success p-2 shadow-sm">
+                                                    <i class="bi bi-box-seam me-1"></i> Disponible
+                                                    <span class="badge bg-light text-dark border border-success ms-2">
+                                                        @prod.StockActual
+                                                    </span>
+                                                </span>
                                             }
                                             else{
-                                                <span class="badge bg-warning text-dark w-75">No Disponible</span>
+                                                <span class="badge bg-warning text-dark p-2 shadow-sm">No Disponible</span>
                                             }
                                         </td>
                                     </tr>

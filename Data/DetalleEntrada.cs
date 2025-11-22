@@ -2,37 +2,31 @@ using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
 
-namespace PuntoDeVenta.Data;
-
-[Table("detalle_entrada")]
-[PrimaryKey(nameof(EntradaId), nameof(LineaNum))]
-public class DetalleEntrada
+namespace PuntoDeVenta.Data
 {
-    [Column("entrada_id")] // Primera columna de la PK
-    public long EntradaId { get; set; }
+    [Table("detalle_entrada")]
+    [PrimaryKey(nameof(EntradaId), nameof(LineaNum))]
+    public class DetalleEntrada
+    {
+        [Column("entrada_id")]
+        public long EntradaId { get; set; }
+        
+        [ForeignKey("EntradaId")]
+        public Entrada? Entrada { get; set; }
 
-    [Column("linea_num")] // Segunda columna de la PK
-    public int LineaNum { get; set; }
+        [Column("linea_num")]
+        public int LineaNum { get; set; }
 
-    [Required]
-    [Column("producto_id")]
-    public long ProductoId { get; set; }
+        [Column("producto_id")]
+        public long ProductoId { get; set; }
 
-    [Required]
-    [Column("cantidad")]
-    public decimal Cantidad { get; set; }
+        [ForeignKey("ProductoId")]
+        public Producto? Producto { get; set; }
 
-    [Required]
-    [Column("costo_unitario")]
-    public decimal CostoUnitario { get; set; }
+        [Column("cantidad")]
+        public decimal Cantidad { get; set; }
 
-    // FKs
-
-    // Este detalle pertenece a una Entrada
-    [ForeignKey("EntradaId")]
-    public virtual Entrada Entrada { get; set; } = null!;
-
-    // Este detalle es de un Producto
-    [ForeignKey("ProductoId")]
-    public virtual Producto Producto { get; set; } = null!;
+        [Column("costo_unitario")]
+        public decimal CostoUnitario { get; set; }
+    }
 }
